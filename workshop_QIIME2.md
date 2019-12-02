@@ -100,8 +100,6 @@ Official Tutorial: https://docs.qiime2.org/2019.10/tutorials/
 ### 4.1 Data importing
 QIIME2支持多种类型的数据导入，比如说单端或者双端、fasta或fastq。由于：i) 目前主流都是双端测序; ii）大部分情况下拿到手都是原始fastq; iii）fasta数据不含质控，无法进行QIIME2中DADA2的聚类，本教程只解决大家导入双端fastq数据的问题。  
 
-本教程介绍两种数据，EMP标准格式和
-
 **a.后缀名为.fastq.gz的单个压缩文件**  
 EMP标准格式，需要有barcode文件  
 
