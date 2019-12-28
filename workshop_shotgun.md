@@ -46,20 +46,24 @@ conda config --show
 ```
 
 
-## 1. Install the software
-创建一个python3.5环境避免过多冲突
+## 1. Environment Preparation
+创建一个python3.6环境避免过多冲突
 ```
-conda create -n py35 python=3.5
+conda create -n py36 python=3.5
 ```
 
 ```
-# 指定环境，从bionconda源安装软件
-conda install -n py35 -c bioconda fastqc
-conda install -n py35 -c bioconda trimmomatic
-conda install -n py35 -c bioconda bbmap
-conda install -n py35 -c jupyter notebook
+# QC software  
+conda install -n py36 -c bioconda fastqc
+conda install -n py36 -c bioconda trimmomatic
+conda install -n py36 -c bioconda bbmap
+conda install -n py36 -c bioconda multiqc
+conda install -n py36 -c bioconda khmer
+# assembly software  
+conda install -n py36 -c bioconda megahit
+conda install -n py36 -c bioconda spades
 ```
-* 看到一个很奇葩的[bug](http://www.mamicode.com/info-detail-2272598.html)，java如果没有桌面是无法运行fastqc的，server版的linux还要安装桌面（图形界面）。ORZ...我忙了好久，发现这个bug根本不影响，只是打不开fastqc图形版而已......
+* 看到一个很奇葩的[bug](http://www.mamicode.com/info-detail-2272598.html)，如果没有桌面是无法运行fastqc交互界面，server版的linux还要安装桌面（图形界面）。ORZ...我忙了好久，发现这个bug根本不影响，只是打不开fastqc图形版而已......
 ```
 # update sources list
 sudo apt-get update
@@ -78,7 +82,10 @@ conda install -c agbiome bbtools
 ## 2. Quality Control
 fastqc  
 trimmomatic  
+adapter sequence files包括seq2和seq3，使用最新的seq3版本  
+multiqc  
 
+## 3. *De novo* Assembly
 
 ### *About Linux*
 find
