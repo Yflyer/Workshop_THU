@@ -4,10 +4,14 @@ Yufei Zeng, zengyf93@qq.com
 THU， 11/15/2019
 
 -----
-02/12/2019 添加了classifier训练的方法和注释教程
+12/02/2019 添加了classifier训练的方法和注释教程
+12/11/2019 添加了phylogenetic inference的方法教程
+12/16/2019 添加了Alpha/Beta diversity的计算代码
 
 ## 1. Install your linux
-For win10 user: enable the WSL and install Ubuntu 18.04 from Microsoft Store  
+For win10 user: enable the WSL and install Ubuntu 18.04 from Microsoft Store
+https://docs.microsoft.com/en-au/windows/wsl/install-manual
+（虽然说了有点多余）装系统后新建用户输入密码时，是不会显示密码的，不要以为出了bug，不要关闭或者跳过，输错了再输就是了。
 For MacOS user: almost nothing to do
 ### *About Linux*
 1991年，**由于贫穷**，初生牛犊的北欧小伙Linus单枪匹马一个人基于Unix系统编写了Linux系统 —— 一个完全免费开源的高效开发系统，对整个计算机行业产生了巨大而深远的影响。
@@ -21,7 +25,7 @@ For MacOS user: almost nothing to do
 \# optional: show current path
 <br>`pwd`<br>
 
- \# download conda<br>
+\# download conda<br>
 `wget https://repo.anaconda.com/archive/Anaconda3-2019.10-Linux-x86_64.sh`
 <br> or <br>
 `wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh`  
@@ -174,9 +178,10 @@ QIIME2中dada2分为paired_end和single_end，此处只展示paired_end处理过
 
 **a. preview the sequences quality**
 ```
+# 生成qiime2 可视化文件
 qiime demux summarize \
   --i-data demux.qza \
-  --o-visualization demux.qzv # 生成qiime2 可视化文件
+  --o-visualization demux.qzv
 ```
 * 根据Fastqc的结果在下一步中切割序列
 * visualization: https://view.qiime2.org/
@@ -187,9 +192,9 @@ qiime demux summarize \
 #evalutate the length of
 qiime dada2 denoise-paired \
   --i-demultiplexed-seqs demux.qza \
-  --p-trim-left-f 25 \
+  --p-trim-left-f 28 \
   --p-trim-left-r 45 \
-  --p-trunc-len-f 250 \
+  --p-trunc-len-f 240 \
   --p-trunc-len-r 200 \
   --o-table table.qza \
   --o-representative-sequences rep-seqs.qza \
@@ -206,6 +211,10 @@ qiime feature-table summarize \
 qiime feature-table tabulate-seqs \
   --i-data rep-seqs.qza \
   --o-visualization rep-seqs.qzv
+
+qiime metadata tabulate \
+  --m-input-file denoising-stats.qza \
+  --o-visualization denoising-stats.qzv
 ```
 \# optional: export the biom file
 ```
@@ -220,6 +229,15 @@ qiime tools export  \
   --input-path rep-seqs.qza\
   --output-path result
 ```  
+
+
+### More information
+plugin: https://docs.qiime2.org/2019.10/plugins/
+
+## Summary of using DADA2
+* 经过比较，根据序列质量切割后序列保留率明显要高于Btrim后的保留率（~80% vs ~50%）
+* pool or not对ASV的结果影响不重要
+* DADA2的结果是可合并的
 
 **c. Taxanomy classifier**  
 这里选择的ref database是silva的99阈值18s。
@@ -257,6 +275,7 @@ qiime feature-classifier fit-classifier-naive-bayes \
   --o-classifier silva_99_classifier.qza
 ```
 返回上级目录用这个classifier注释样品的ref.seqs（即ASV序列）
+
 ```
 qiime feature-classifier classify-sklearn \
   --i-classifier  silva_99_classifier.qza \
@@ -266,17 +285,95 @@ qiime metadata tabulate \
   --m-input-file taxonomy.qza \
   --o-visualization taxonomy.qzv
 ```
+## 4.3 Phylogenetic (Diversity) Analysis
 
+建立工作目录
+```
+mkdir phylogeny
+cd phylogeny
+```
 
-### More information
-plugin: https://docs.qiime2.org/2019.10/plugins/
+```
+qiime alignment mafft \
+  --i-sequences rep-seqs-se.qza \
+  --o-alignment aligned-rep-seqs.qza
+```  
 
-## Summary of using DADA2
-* 经过比较，根据序列质量切割后序列保留率明显要高于Btrim后的保留率（~80% vs ~50%）
-* pool or not对ASV的结果影响不重要
-* DADA2的结果是可合并的
+**b. Alignment**
 
+*(i).masking alignments*
+```
+qiime alignment mask \
+  --i-alignment aligned-rep-seqs.qza \
+  --o-masked-alignment masked-aligned-rep-seqs.qza
+```
+*(ii).reference alignments*  
 
+PyNAST  
+Infernal  
+SINA  
+
+**c. Built a tree
+FASTTREE  
+```
+qiime phylogeny fasttree \
+  --i-alignment masked-aligned-rep-seqs.qza \
+  --o-tree fasttree-tree.qza
+```
+RAxML
+```
+qiime phylogeny raxml \
+  --i-alignment masked-aligned-rep-seqs.qza \
+  --p-substitution-model GTRCAT \
+  --p-seed 1723 \
+  --p-n-searches 5 \
+  --o-tree raxml-cat-searches-tree.qza \
+  --verbose
+```
+```
+qiime phylogeny iqtree \
+  --i-alignment masked-aligned-rep-seqs.qza \
+  --p-substitution-model 'GTR+I+G' \
+  --o-tree iqt-gtrig-tree.qza \
+  --verbose
+```
+
+**d. Root the tree
+```
+qiime phylogeny midpoint-root \
+  --i-tree fasttree-tree.qza \
+  --o-rooted-tree rooted-fasttree-tree.qza
+```
+**e. Export the tree
+```
+qiime tools export \
+  --input-path rooted-fasttree-tree.qza \
+  --output-path fasttree
+```
+
+4.4 Alpha/Beta
+
+qiime diversity core-metrics-phylogenetic \
+    --i-phylogeny rooted-fasttree-tree.qza \
+    --i-table table.qza \
+    --p-sampling-depth 6000 \
+    --m-metadata-file manifest.tsv \
+    --output-dir core-metrics-results
+
+# beta explore
+qiime diversity beta-group-significance \
+    --i-distance-matrix core-metrics-results/bray_curtis_distance_matrix.qza \
+    --m-metadata-file Manifest.tsv \
+    --m-metadata-column Site \
+    --o-visualization core-metrics-results/bray_curtis_distance_matrix-site.qzv \
+    --p-pairwise
+
+qiime diversity beta-group-significance \
+    --i-distance-matrix core-metrics-results/bray_curtis_distance_matrix.qza \
+    --m-metadata-file Manifest.tsv \
+    --m-metadata-column Status \
+    --o-visualization core-metrics-results/bray_curtis_distance_matrix-status.qzv \
+    --p-pairwise
 
 
 
