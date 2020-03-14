@@ -1,6 +1,6 @@
 # Simplified Tutorial of Processing Sequencing Data
 
-Yufei Zeng, zengyf93@qq.com
+Yufei Zeng, zengyf93@qq.com  
 THU， 15/03/2020
 
 -----
@@ -8,18 +8,18 @@ THU， 15/03/2020
 
 ***In this turtorial, we will operate the sequecning data of microbial community, to generate the relative abundunce table of species and their taxanomy information.***
 
-### 1. Use Linux system
+### 1. Linux system
 
 ###### 1.1 Information for your sign-in
 
 Please,  
-(1) connect to THU vpn in advance
+(1) connect to THU vpn in advance  
 (2) install a remote terminal (e.g., Xshell)
 
 ```
 IP：166.111.42.42
 User: test0
-password: testtest
+password: ********
 ```
 *Why we use Linux?*
 * High stability
@@ -52,24 +52,32 @@ password: testtest
 ---
 \# The path in Linux
 
-\# relative path
-From the current directory: `./file_name  `
+\# relative path  
+From the current directory: `./file_name  `  
 Upper directory: `../file_name`
 
-\# Absolute path
-From the root directory /: `/home/test`
+\# Absolute path  
+From the root directory /: `/home/test`  
 Home directory shortcuts: `~`
 
 ---
 
 \# Example: view your fastq data
 ```
-# Enter sequence folder
-cd ~ /Workshop_THU/Tutorials_rawdata/
-# Extract 4 lines per file
-head -4 barcodes.fastq forward.fastq reverse.fastq > data_report.txt
+# Enter the directory of forward sequence (R1)
+cd R1
+
+# Extract sample list
+ls | grep 18S
+
+# Extract 4 lines per sample
+head -4 $(ls | grep 18S) > data_report.txt
+
 # View data report
 cat data_report.txt
+
+# optional:directly view the data by less  
+less 18S_R1_X2016_10N
 ```
 Two common type of sequence data format:
 
@@ -110,15 +118,15 @@ Conda is an open-source package management system and environment management sys
 \# **Optional: Configure QIIME2 by conda**
 ```
 # download the yml
- wget https://data.qiime2.org/distro/core/qiime2-2019.10-py36-linux-conda.yml
+ wget https://data.qiime2.org/distro/core/qiime2-2020.2-py36-linux-conda.yml
 
 # configure env by yml (time-consuming!!!)
- conda env create -n qiime2-2019.10 --file qiime2-2019.10-py36-linux-conda.yml
+ conda env create -n qiime2-2020.2 --file qiime2-2020.2-py36-linux-conda.yml
 
-# activate QIIME2 env
- conda activate qiime2-2019.10
+# activate QIIME2 environments
+ conda activate qiime2-2020.2
 ```
-### 2. Use QIIME2
+### 2. QIIME2
 ###### *About QIIME2*
 QIIME2 is a next-generation microbiome bioinformatics platform that is extensible, free, open source, and community developed.
 
@@ -127,9 +135,12 @@ Official Tutorial: https://docs.qiime2.org/2019.10/tutorials/
 
 ###### 2.1 Import Data
 
-   * data type: split files of Fastq
+   * data type: split files of fastq
    * data source: The University of Oklahoma
-   * sequencing method: 18s rRNA amplicon sequencing (F547-R952)
+   * method: 18s rRNA high through-put amplicon sequencing
+   * strategy: pair-end 250 bp without primer on V4 region (**(F565-R981, 416 bp)**)
+   * forward primer: CCAGCASCYGCGGTAATTCC **(20 bp)**
+   * reverse primer: ACTTTCGTTCTTGATYRA **(18 bp)**
    * The pre-required files: R1 data, R2 data, and mapping information
 
 ```
@@ -155,32 +166,36 @@ The DADA2 algorithm makes use of a parametric error model (err) and every amplic
 #evalutate the length of sequence in bad quality
 qiime dada2 denoise-paired \
   --i-demultiplexed-seqs demux.qza \
-  --p-trim-left-f 28 \
-  --p-trim-left-r 45 \
-  --p-trunc-len-f 240 \
+  --p-trim-left-f 43 \
+  --p-trim-left-r 42 \
+  --p-trunc-len-f 245 \
   --p-trunc-len-r 200 \
   --o-table table.qza \
   --o-representative-sequences rep-seqs.qza \
   --o-denoising-stats denoising-stats.qza
-```
-`--p-trim-left-f` or `--p-trim-left-r`: the length for trimming beginning part of forward/reverse sequence
-`--p-trunc-len-f` or `--p-trunc-len-r`:  the length for cut off end part of forward/reverse sequence
+```  
+* `--p-trim-left-f` or `--p-trim-left-r`: the length for trimming beginning part of forward/reverse sequence  
+* `--p-trunc-len-f` or `--p-trunc-len-r`:  the length for cut off end part of forward/reverse sequence  
 
 ![avatar](Sequence.png)
 
+*Think a question:*  
+*The length of target fragment are 981 - 565 - (20+18) = 378 bp*  
+*So what is the length of the merged sequence after denoising in this step?*
 
 \# optional: visualize the DADA2 result
 ```
 # OTU visualization
 qiime feature-table summarize \
   --i-table table.qza \
-  --o-visualization table.qzv \
+  --o-visualization table.qzv
 
 # representative sequences visualization
 qiime feature-table tabulate-seqs \
   --i-data rep-seqs.qza \
   --o-visualization rep-seqs.qzv
 
+# denoising information
 qiime metadata tabulate \
   --m-input-file denoising-stats.qza \
   --o-visualization denoising-stats.qzv
@@ -199,7 +214,7 @@ qiime tools export  \
   --output-path result
 ```
 ###### 2.3 Taxanomy classifier
-We will train the Naive Bayes classifier using silva_132 reference sequences and classify the representative sequences from the Moving Pictures dataset.
+We will train the Naive Bayes classifier using silva_132 reference sequences (clustered at 99% similarity) and classify the representative sequences from the Moving Pictures dataset.
 
 ```
 mkdir training_classifiers
@@ -238,7 +253,7 @@ qiime feature-classifier fit-classifier-naive-bayes \
 ```
 qiime feature-classifier classify-sklearn \
   --i-classifier  silva_99_classifier.qza \
-  --i-reads rep-seqs.qza \
+  --i-reads ../rep-seqs.qza \
   --o-classification taxonomy.qza
 qiime metadata tabulate \
   --m-input-file taxonomy.qza \
