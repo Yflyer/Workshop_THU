@@ -8,6 +8,7 @@ mkdir [your_project_name]
 cp -r /vd04/yufei/workshop_shotgun/test/0_rawdata [your_project_name]
 
 ###################  qc  #################
+# time_consuming: ★☆
 conda activate py36
 mkdir 01_cleandata
 cd 01_cleandata
@@ -20,6 +21,7 @@ trimmomatic PE -phred33 -threads 4 S1_r1.fq.gz S1_r2.fq.gz \
 
 ##################   contig assembly   #######################
 ### we used megahit to save time and memory
+# time_consuming: ★★★★
 cd ..
 mkdir -p 02_megahit
 cd 02_megahit
@@ -30,6 +32,7 @@ sed -i "s/>/>S1\_/1" S1/S1.contigs.fa
 
 #################   ORF prediciton  ############
 ### we used prokka to avoid too much detail
+# time_consuming: ★★☆
 cd ..
 mkdir -p 03_prokka
 cd 03_prokka
@@ -38,9 +41,23 @@ prokka --metagenome --cpus 4 --addgenes --outdir S1 --prefix S1 --mincontiglen 5
 
 sed -i "s/>/>S1\_/1" S1/S1.ffn
 sed -i "s/>/>S1\_/1" S1/S1.faa
+############## prokka
+#.gff	This is the master annotation in GFF3 format, containing both sequences and annotations. It can be viewed directly in Artemis or IGV.
+#.gbk	This is a standard Genbank file derived from the master .gff. If the input to prokka was a multi-FASTA, then this will be a multi-Genbank, with one record for each sequence.
+#.fna	Nucleotide FASTA file of the input contig sequences.
+#.faa	Protein FASTA file of the translated CDS sequences.
+#.ffn	Nucleotide FASTA file of all the prediction transcripts (CDS, rRNA, tRNA, tmRNA, misc_RNA)
+#.sqn	An ASN1 format "Sequin" file for submission to Genbank. It needs to be edited to set the correct taxonomy, authors, related publication etc.
+#.fsa	Nucleotide FASTA file of the input contig sequences, used by "tbl2asn" to create the .sqn file. It is mostly the same as the .fna file, but with extra Sequin tags in the sequence description lines.
+#.tbl	Feature Table file, used by "tbl2asn" to create the .sqn file.
+#.err	Unacceptable annotations - the NCBI discrepancy report.
+#.log	Contains all the output that Prokka produced during its run. This is a record of what settings you used, even if the --quiet option was enabled.
+#.txt	Statistics relating to the annotated features found.
+#.tsv	Tab-separated file of all features: locus_tag,ftype,len_bp,gene,EC_number,COG,product
 
 ##################   mapping  ################
 ### we used bamm to quickly get mapping and coverage
+# time_consuming: ★★★☆
 cd ..
 #switch to conda env py27
 conda activate py27
@@ -50,7 +67,7 @@ ln -s ../03_prokka/*/*.ffn ./
 ln -s ../01_cleandata/trimmed* ./
 
 bamm make -d S1.ffn -c trimmed.S1_r1.fq.gz trimmed.S1_r2.fq.gz -t 4 --out_folder S1
-bamm parse -c S1.covs.tsv -l S1.links.tsv -b S1/S1.ffn.trimmed.S1_r1.bam
+bamm parse -c S1.covs.tsv -b S1/S1.ffn.trimmed.S1_r1.bam
 
 #### Coverage calculation modes
 ### BamM implements several coverage calculation methods. The user can choose the
@@ -68,20 +85,48 @@ bamm parse -c S1.covs.tsv -l S1.links.tsv -b S1/S1.ffn.trimmed.S1_r1.bam
 
 ################################################
 ### we used mmseq to quickly cluster
+# time_consuming: ★
 cd ..
 conda activate py36
 mkdir 05_orf_clustering
 cd 05_orf_clustering
 
 cat ../03_prokka/*/*.faa >> merge.faa
-
-mkdir db clu_db clu_rep
+# cluster and get its info
+mkdir db clu_db clu_rep 
 mmseqs createdb merge.faa db/faa
 mmseqs linclust db/faa clu_db/faa tmp --threads 4 --min-seq-id 0.8
 mmseqs createtsv db/faa db/faa clu_db/faa clu.tsv --threads 4
-
+# get fasta file
 mmseqs createseqfiledb db/faa clu_db/faa clu_rep/faa
 mmseqs result2flat db/faa db/faa clu_rep/faa clu_rep.fasta
 #################################################
 
 ### and next, we change to R environment to process our ORFs data
+
+### Bonus: bin your contigs, to get genome ###
+# time_consuming: ★★★★
+cd ..
+mkdir 06_bining
+cd 06_bining
+### first: get contigs coverage as abundunce file
+ln -s ../02_megahit/*/*.fa ./
+ln -s ../01_cleandata/trimmed* ./
+
+conda activate py27
+bamm make -d S1.contigs.fa -c trimmed.S1_r1.fq.gz trimmed.S1_r2.fq.gz -t 4 --out_folder S1
+bamm parse -c S1.covs.tsv -b S1/S1.contigs.trimmed.S1_r1.bam
+
+awk '{print $1"\t"$3}' S1.covs.tsv | grep -v '^#' > S1.abundance.txt
+
+### second run maxbin2
+conda activate py36
+run_MaxBin.pl -thread 4 -contig S1.contigs.fa -abund S1.abundance.txt -out S1/S1
+
+# (out).0XX.fasta	the XX bin. XX are numbers, e.g. out.001.fasta
+# (out).summary	summary file describing which contigs are being classified into which bin.
+# (out).log	log file recording the core steps of MaxBin algorithm
+# (out).marker	marker gene presence numbers for each bin. This table is ready to be plotted by R or other 3rd-party software.
+# (out).marker.pdf	visualization of the marker gene presence numbers using R
+# (out).noclass	all sequences that pass the minimum length threshold but are not classified successfully.
+# (out).tooshort	all sequences that do not meet the minimum length threshold.
