@@ -1,6 +1,8 @@
 
 # Linux, QIIME2, & DADA2
-Yufei Zeng, zengyf93@qq.com  
+Yufei Zeng
+yfzeng0827@hotmail.com
+github.com/Yflyer/
 THU， 11/15/2019
 
 -----

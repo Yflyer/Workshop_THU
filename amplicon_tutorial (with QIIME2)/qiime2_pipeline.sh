@@ -1,6 +1,8 @@
 # This is a pipeline of QIIME2 command
 # Please run in activated conda QIIME2 environment
-# Yufei, 5/15/2020, zengyf@qq.com
+# Yufei, 5/15/2020
+# yfzeng0827@hotmail.com
+# github.com/Yflyer/
 
 # adjust the name of sample
 rename.py R2 _split_2. .

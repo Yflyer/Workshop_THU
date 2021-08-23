@@ -1,6 +1,8 @@
 
 # Shotgun data processing
-Yufei Zeng, zengyf93@qq.com  
+Yufei Zeng
+yfzeng0827@hotmail.com
+github.com/Yflyer/  
 THU， 12/03/2019
 
 -----
