@@ -3,13 +3,28 @@
 ### yfzeng0827@hotmail.com
 ### github.com/Yflyer/
 
-##### before the work, please copy the data to your project directory
+############### before the work ##################
+# please copy the data to your project directory
 mkdir [your_project_name]
 cp -r /vd04/yufei/workshop_shotgun/test/0_rawdata [your_project_name]
+cd [your_project_name]
+# make a work screen 
+# screen is useful, please know more
+screen -s workshop
 
-###################  qc  #################
-# time_consuming: ★☆
+############ steps in our workshop ###############
+# quality control (qc)
+# contigs assembly
+# ORF prediciton
+# sequence mapping
+# ORF cluster
+# bining
+# (annotation, uncompleted)
+
+#### activate conda env #####
 conda activate py36
+###################  qc  ######################
+# time_consuming: ★☆
 mkdir 01_cleandata
 cd 01_cleandata
 ln -s ../0_rawdata/* ./
@@ -30,7 +45,7 @@ megahit -1 trimmed.S1_r1.fq.gz -2 trimmed.S1_r1.fq.gz --min-count 2 --k-list 29,
 
 sed -i "s/>/>S1\_/1" S1/S1.contigs.fa
 
-#################   ORF prediciton  ############
+#################   ORF prediciton  #######################
 ### we used prokka to avoid too much detail
 # time_consuming: ★★☆
 cd ..
@@ -119,7 +134,7 @@ bamm parse -c S1.covs.tsv -b S1/S1.contigs.trimmed.S1_r1.bam
 
 awk '{print $1"\t"$3}' S1.covs.tsv | grep -v '^#' > S1.abundance.txt
 
-### second run maxbin2
+### second: run maxbin2
 conda activate py36
 run_MaxBin.pl -thread 4 -contig S1.contigs.fa -abund S1.abundance.txt -out S1/S1
 
