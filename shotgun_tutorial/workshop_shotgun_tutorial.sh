@@ -6,8 +6,8 @@
 ############### before the work ##################
 # please copy the data to your project directory
 mkdir [your_project_name]
-cp -r /vd04/yufei/workshop_shotgun/test/0_rawdata [your_project_name]
 cd [your_project_name]
+cp -r /vd04/yufei/workshop_shotgun/test/0_rawdata [your_project_name]
 # make a work screen 
 # screen is useful, please know more
 screen -s workshop
