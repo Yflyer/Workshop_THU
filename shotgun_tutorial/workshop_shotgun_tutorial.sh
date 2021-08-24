@@ -28,7 +28,7 @@ conda activate py36
 # time_consuming: ★☆
 mkdir 01_cleandata
 cd 01_cleandata
-ln -s ../0_rawdata/* ./
+ln -s ../0_rawdata/* ./ # link 
 trimmomatic PE -phred33 -threads 4 S1_r1.fq.gz S1_r2.fq.gz \
       trimmed.S1_r1.fq.gz outtrimmed.S1_r1.fq.gz trimmed.S1_r2.fq.gz outtrimmed.S1_r2.fq.gz  \
       ILLUMINACLIP:TruSeq3-PE.fa:2:30:10 \
@@ -42,7 +42,7 @@ cd ..
 mkdir -p 02_megahit
 cd 02_megahit
 ln -s ../01_cleandata/trimmed* ./
-megahit -1 trimmed.S1_r1.fq.gz -2 trimmed.S1_r1.fq.gz --min-count 2 --k-list 29,39,51,67,85,107,133 -m 0.5 -t 4 --min-contig-len 500 --out-prefix S1 -o S1
+megahit -1 trimmed.S1_r1.fq.gz -2 trimmed.S1_r2.fq.gz --min-count 2 --k-list 29,39,51,67,85,107,133 -m 0.5 -t 4 --min-contig-len 500 --out-prefix S1 -o S1
 
 sed -i "s/>/>S1\_/1" S1/S1.contigs.fa
 
