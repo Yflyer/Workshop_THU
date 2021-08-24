@@ -16,9 +16,9 @@ screen -s workshop
 ### The goal of workflow is to generate a GeoChip-like result ###
 # quality control (qc)
 # contigs assembly
-# ORF prediciton
+# ORFs prediciton
 # sequence mapping
-# ORF cluster
+# ORFs cluster (we will get a GeoChip-like result at this step)
 # bining
 # (annotation, uncompleted)
 
