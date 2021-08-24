@@ -13,6 +13,7 @@ cd [your_project_name]
 screen -s workshop
 
 ############ steps in our workshop ###############
+### The goal of workflow is to generate a GeoChip-like result ###
 # quality control (qc)
 # contigs assembly
 # ORF prediciton
@@ -119,7 +120,7 @@ mmseqs result2flat db/faa db/faa clu_rep/faa clu_rep.fasta
 
 ### and next, we change to R environment to process our ORFs data
 
-### Bonus: bin your contigs, to get genome ###
+### Bonus: bin your contigs, to get metegenomic-assembly genomes (MAGs) ###
 # time_consuming: ★★★★
 cd ..
 mkdir 06_bining
