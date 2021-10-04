@@ -79,11 +79,15 @@ cd ..
 conda activate py27
 mkdir -p 04_mapping
 cd 04_mapping
-ln -s ../03_prokka/*/*.ffn ./
 ln -s ../01_cleandata/trimmed* ./
+ln -s ../02_megahit/*/*.fa ./
+ln -s ../03_prokka/*/*.ffn ./
 
 bamm make -d S1.ffn -c trimmed.S1_r1.fq.gz trimmed.S1_r2.fq.gz -t 4 --out_folder S1
-bamm parse -c S1.covs.tsv -b S1/S1.ffn.trimmed.S1_r1.bam
+bamm parse -c S1.ffn.cov.tsv -b S1/S1.ffn.trimmed.S1_r1.bam
+
+bamm make -d S1.contigs.fa -c trimmed.S1_r1.fq.gz trimmed.S1_r2.fq.gz -t 4 --out_folder S1
+bamm parse -c S1.contigs.cov.tsv -b S1/S1.contigs.trimmed.S1_r1.bam
 
 #### Coverage calculation modes
 ### BamM implements several coverage calculation methods. The user can choose the
@@ -120,15 +124,21 @@ mmseqs createtsv db/contigs db/contigs clu_db/contigs clu.contigs.tsv --threads 
 mmseqs createseqfiledb db/contigs clu_db/contigs clu_rep/contigs
 mmseqs result2flat db/contigs db/contigs clu_rep/contigs clu_rep.contigs.fasta # get fasta file
 
-# faa cluster
+# faa cluster (to get ffn table)
 mmseqs createdb merge.faa db/faa
-mmseqs linclust db/faa clu_db/faa tmp --threads 4 --min-seq-id 0.8
-mmseqs createtsv db/faa db/faa clu_db/faa clu.faa.tsv --threads 4
+mmseqs linclust db/faa clu_db/faa tmp --threads 24
+mmseqs createtsv db/faa db/faa clu_db/faa clu.faa.tsv --threads 24
 mmseqs createseqfiledb db/faa clu_db/faa clu_rep/faa
 mmseqs result2flat db/faa db/faa clu_rep/faa clu_rep.faa.fasta # get fasta file
-#################################################
 
-### and next, we change to R environment to process our ORFs data
+# merge table
+mkdir ffn_cov
+cp ../04_mapping/*ffn.covs.tsv ffn_cov/
+reformat_cluster.py -i ffn_cov -c clu.faa.tsv -o ffn.merge.tsv
+
+mkdir contigs_cov
+cp ../04_mapping/*.contigs.covs.tsv contigs_cov/
+reformat_cluster.py -i contigs_cov -c clu.contigs.tsv -o contigs.merge.tsv
 
 ### Bonus: bin your contigs, to get metegenomic-assembly genomes (MAGs) ###
 # time_consuming: ★★★★
@@ -158,12 +168,27 @@ run_MaxBin.pl -thread 4 -contig S1.contigs.fa -abund S1.abundance.txt -out S1/S1
 # (out).tooshort	all sequences that do not meet the minimum length threshold.
 
 ##################   dbcan   ################
-### 
-# time_consuming: 
+###
+# time_consuming:
 cd ..
 mkdir 07_dbcan
+cd 07_dbcan
+
+conda activate run_dbcan
 ln -s ../03_prokka/*/*.ffn ./
 run_dbcan.py S1.ffn prok --out_dir S1_dbcan_out/ --db_dir /vd02/home2/Xue/db/ --dia_cpu 10 --hmm_cpu 10 --tf_cpu 10 #指定diamond, hmm等cpu数量。
+
+#################  KOfam  ################
+#在国家微生物科学数据中心网站可以下载最新版2019年KOfam ko_list和profiles （KEGG Orthologs（KOs）的定制HMM数据库）为用户的序列数据的搜索，通过将用户的序列数据与KEGG路径和EC编号联系起来，得到注释结果。
+cd ..
+mkdir 08_KOfam
+cd 08_KOfam
+conda activate py36
+
+mkdir ko_tmp S1
+ln -s ../03_prokka/*/*.faa .
+exec_annotation -f  detail-tsv -E 1e-5 --profile /vd03/home/MetaDatabase/KOfam_2019/Kofam/profiles/ --ko-list /vd03/home/MetaDatabase/KOfam_2019/Kofam/ko_list --cpu 20 --tmp-dir ./ko_tmp -o ./S1/S1_kofam.txt ./S1.faa
+
 
 ### singleM - alpha diversity estimation
 ln -s ../0_rawdata/* ./
