@@ -149,6 +149,8 @@ awk '{print $1"\t"$3}' S1.covs.tsv | grep -v '^#' > S1.abundance.txt
 conda activate py36
 run_MaxBin.pl -thread 4 -contig S1.contigs.fa -abund S1.abundance.txt -out S1/S1
 
+### CheckM
+
 # (out).0XX.fasta	the XX bin. XX are numbers, e.g. out.001.fasta
 # (out).summary	summary file describing which contigs are being classified into which bin.
 # (out).log	log file recording the core steps of MaxBin algorithm
@@ -162,10 +164,16 @@ run_MaxBin.pl -thread 4 -contig S1.contigs.fa -abund S1.abundance.txt -out S1/S1
 # time_consuming: 
 cd ..
 mkdir 07_dbcan
-ln -s ../03_prokka/*/*.ffn ./
-run_dbcan.py S1.ffn prok --out_dir S1_dbcan_out/ --db_dir /vd02/home2/Xue/db/ --dia_cpu 10 --hmm_cpu 10 --tf_cpu 10 #指定diamond, hmm等cpu数量。
+# use protein sequence to find CGCs
+ln -s ../03_prokka/*/*.faa ./
+run_dbcan.py S1.faa protein --out_dir S1_dbcan_out/ --db_dir /vd02/home2/Xue/db/ --dia_cpu 10 --hmm_cpu 10 --tf_cpu 10
+# use DNA sequence to find CGCs
+ln -s ../02_megahit/*/*.fa ./
+run_dbcan.py S1.contigs.fa meta --out_dir S1_dbcan_out/ --db_dir /vd02/home2/Xue/db/ --dia_cpu 10 --hmm_cpu 10 --tf_cpu 10
+# dbcan apply hmm, diamond, and hotpep methods to predict CGCs. the CGCs predicted by only one methods are not included
+# 
 
 ### singleM - alpha diversity estimation
 ln -s ../0_rawdata/* ./
 singlem pipe --forward trimmed.S1_r1.fq.gz --reverse trimmed.S1_r2.fq.gz --otu_table s1.tsv --threads 2 --output_extras
-### CheckM
+
