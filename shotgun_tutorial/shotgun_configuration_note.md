@@ -94,12 +94,14 @@ find
 grep
 
 ## 4. toolkit env config
-###
+### kingfisher
 conda create -c conda-forge -c bioconda -n kingfisher pigz python extern curl sra-tools pandas requests aria2conda activate kingfisher
 
 \#使用conda activate不能成功激活环境时可以尝试使用：
 \# source activate kingfisherpip install bird_tool_utils'>='0.2.17git clone https://github.com/wwood/kingfisher-downloadcd kingfisher-download/binexport PATH=$PWD:$PATHkingfisher -h#弹出帮助文档即安装成功
 
+### das_tool
+conda create -c conda-forge -c bioconda -n das_tool das_tool
 
 ### dbcan
 #### dbcan database config
@@ -117,3 +119,5 @@ cd db \
 #Check Program.
 run_dbcan.py EscheriaColiK12MG1655.fna prok --out_dir test –db_dir /vd02/home2/Xue/db/
 
+###MetaBAT2
+conda activate py27

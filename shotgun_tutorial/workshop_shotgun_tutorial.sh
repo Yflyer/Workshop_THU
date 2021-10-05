@@ -143,8 +143,8 @@ reformat_cluster.py -i contigs_cov -c clu.contigs.tsv -o contigs.merge.tsv
 ### Bonus: bin your contigs, to get metegenomic-assembly genomes (MAGs) ###
 # time_consuming: ★★★★
 cd ..
-mkdir 06_bining
-cd 06_bining
+mkdir 06_binning
+cd 06_binning
 ### first: get contigs coverage as abundunce file
 ln -s ../02_megahit/*/*.fa ./
 ln -s ../01_cleandata/trimmed* ./
