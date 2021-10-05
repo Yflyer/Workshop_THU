@@ -92,3 +92,28 @@ multiqc
 ### *About Linux*
 find
 grep
+
+## 4. toolkit env config
+###
+conda create -c conda-forge -c bioconda -n kingfisher pigz python extern curl sra-tools pandas requests aria2conda activate kingfisher
+
+\#使用conda activate不能成功激活环境时可以尝试使用：
+\# source activate kingfisherpip install bird_tool_utils'>='0.2.17git clone https://github.com/wwood/kingfisher-downloadcd kingfisher-download/binexport PATH=$PWD:$PATHkingfisher -h#弹出帮助文档即安装成功
+
+
+### dbcan
+#### dbcan database config
+cd db \
+    && wget http://bcb.unl.edu/dbCAN2/download/CAZyDB.07312019.fa.nr && diamond makedb --in CAZyDB.07312019.fa.nr -d CAZy \
+    && wget http://bcb.unl.edu/dbCAN2/download/Databases/dbCAN-HMMdb-V8.txt && mv dbCAN-HMMdb-V8.txt dbCAN.txt && hmmpress dbCAN.txt \
+    && wget http://bcb.unl.edu/dbCAN2/download/Databases/tcdb.fa && diamond makedb --in tcdb.fa -d tcdb \
+    && wget http://bcb.unl.edu/dbCAN2/download/Databases/tf-1.hmm && hmmpress tf-1.hmm \
+    && wget http://bcb.unl.edu/dbCAN2/download/Databases/tf-2.hmm && hmmpress tf-2.hmm \
+    && wget http://bcb.unl.edu/dbCAN2/download/Databases/stp.hmm && hmmpress stp.hmm \
+    && cd ../ && wget http://bcb.unl.edu/dbCAN2/download/Samples/EscheriaColiK12MG1655.fna \
+    && wget http://bcb.unl.edu/dbCAN2/download/Samples/EscheriaColiK12MG1655.faa \
+    && wget http://bcb.unl.edu/dbCAN2/download/Samples/EscheriaColiK12MG1655.gff
+
+#Check Program.
+run_dbcan.py EscheriaColiK12MG1655.fna prok --out_dir test –db_dir /vd02/home2/Xue/db/
+
