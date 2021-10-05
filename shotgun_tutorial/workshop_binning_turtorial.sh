@@ -19,12 +19,31 @@ screen -s binning
 # check metabat2 workflow and example
 # check das_tool usage
 
-mkdir binning_data
-cd binning_data
-cat *.fa > merge.contigs.fa
+mkdir **
+cd **
+ln -s ../02_megahit/1-*/*.fa .
+ln -s ../01_cleandata/L1-* .
 conda activate py36
-seqkit seq -m 1500 merge.contigs.fa > merge.trimlen.fa
-ln -s ../01_cleandata/trimmed.* .
+seqkit seq -m 1500 *.fa > L1.fa
 
 conda activate py27
-bamm make -d merge.trimlen.fa -c trimmed.10-V1_R1.fq.gz trimmed.10-V1_R2.fq.gz 10-V2_R1.fq.gz trimmed.10-V2_R2.fq.gz trimmed.10-V3_R1.fq.gz trimmed.10-V3_R2.fq.gz trimmed.10-V4_R1.fq.gz trimmed.10-V4_R2.fq.gz trimmed.10-V5_R1.fq.gz trimmed.10-V5_R2.fq.gz -t 60 --out_folder merge
+bamm make -d L1.fa -c L1-*.fq.gz -t 60 --out_folder L1
+bamm parse -c L1.cov.tsv -b L1/*.bam -t 60
+
+# file excluding first N lines: tail -n +<N+1> <filename> 
+# awk default print: awk "{}1"
+cat L10.cov.tsv | tail -n +2 | awk '{$2=""}1' > L10.abund.tsv
+
+conda activate py36
+mkdir L10.binning
+run_MaxBin.pl -contig L10.fa -abund L10.abund.tsv -out L10.binning/L10 -thread 60
+
+conda activate py27
+bamm make -d L10.fa -c 10-V1.r1.fq.gz 10-V1.r2.fq.gz 10-V2.r1.fq.gz 10-V2.r2.fq.gz 10-V3.r1.fq.gz 10-V3.r2.fq.gz 10-V4.r1.fq.gz 10-V4.r2.fq.gz 10-V5.r1.fq.gz 10-V5.r2.fq.gz -t 60 --out_folder L10
+
+
+
+
+
+
+
