@@ -13,6 +13,8 @@ cd [your_project_name]
 screen -s binning
 
 # note
+# check bamm map detail: orientation insertsize
+# check bbmap
 # check maxbin2 workflow and parameters
 # check metabat2 workflow and example
 # check das_tool usage
@@ -20,8 +22,9 @@ screen -s binning
 mkdir binning_data
 cd binning_data
 cat *.fa > merge.contigs.fa
+conda activate py36
 seqkit seq -m 1500 merge.contigs.fa > merge.trimlen.fa
 ln -s ../01_cleandata/trimmed.* .
 
-
+conda activate py27
 bamm make -d merge.trimlen.fa -c trimmed.10-V1_R1.fq.gz trimmed.10-V1_R2.fq.gz 10-V2_R1.fq.gz trimmed.10-V2_R2.fq.gz trimmed.10-V3_R1.fq.gz trimmed.10-V3_R2.fq.gz trimmed.10-V4_R1.fq.gz trimmed.10-V4_R2.fq.gz trimmed.10-V5_R1.fq.gz trimmed.10-V5_R2.fq.gz -t 60 --out_folder merge
