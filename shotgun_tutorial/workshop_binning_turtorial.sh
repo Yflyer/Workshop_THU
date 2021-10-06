@@ -52,7 +52,7 @@ pigz -d -c -k merged.R1.fq.gz > merged.R1.fq
 pigz -d -c -k merged.R2.fq.gz > merged.R2.fq
 bbmerge-auto.sh in=reads.fq out=merged.fq outu=unmerged.fq rem extend2=50 k=62
 # spades (use less cores for safe!)
-spades.py --meta -1 merged.R1.fq.gz -2 merged.R2.fq.gz -o L1 --threads 4 -m 150
+spades.py --meta -1 merged.R1.fq.gz -2 merged.R2.fq.gz -o L1 --threads 8 -m 150
 
 
 # minimum information about a metagenomeassembled genome (MIMAG) standards:
