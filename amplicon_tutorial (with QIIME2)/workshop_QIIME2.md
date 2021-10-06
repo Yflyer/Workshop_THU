@@ -17,7 +17,8 @@ https://docs.microsoft.com/en-au/windows/wsl/install-manual
 For MacOS user: almost nothing to do
 ### *About Linux*
 1991年，**由于贫穷**，初生牛犊的北欧小伙Linus单枪匹马一个人基于Unix系统编写了Linux系统 —— 一个完全免费开源的高效开发系统，对整个计算机行业产生了巨大而深远的影响。
-* Unix系统作为多任务系统的祖师爷级产品，由贝尔实验室的geeker们研发，逐渐成为行业标准，后来苹果的MacOS系统也基于该系统研发（MacOS几乎能和Linux无缝衔接的重要原因）
+* 贝尔实验室受军方委托研发一款多使用者、多任务和多层次计算的计算机系统MULTICS(Multiplexd information and Computer Services),最终由于项目难度过大流产。K.Thompson为了自己在该系统上的游戏得以延续，为这款游戏开发了系统环境，并被同事搞笑取名为UnICS（Uniplexed），即后续的Unix
+* Unix系统作为多任务系统的祖师爷级产品，逐渐成为行业标准，后来苹果的MacOS系统也基于该系统研发（MacOS几乎能和Linux无缝衔接的重要原因）
 * 最早的服务器（计算机），比如IBM的701，是无法进行多任务并行操作的，科学家们需要排队使用。随着万维网和Unix的出现，人们可以同时调用多个终端（terminal）去使用服务器。  
 
 
