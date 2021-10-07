@@ -116,8 +116,15 @@ cd db \
     && wget http://bcb.unl.edu/dbCAN2/download/Samples/EscheriaColiK12MG1655.faa \
     && wget http://bcb.unl.edu/dbCAN2/download/Samples/EscheriaColiK12MG1655.gff
 
-#Check Program.
+# Check Program.
 run_dbcan.py EscheriaColiK12MG1655.fna prok --out_dir test –db_dir /vd02/home2/Xue/db/
 
-###MetaBAT2
+### MetaBAT2
 conda activate py27
+
+###  checkM-genome
+conda activate py36
+pip3 install numpy
+pip3 install matplotlib
+pip3 install pysam
+pip3 install checkm-genome

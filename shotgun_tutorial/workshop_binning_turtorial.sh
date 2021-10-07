@@ -40,6 +40,9 @@ conda activate py36
 mkdir L1.binning
 run_MaxBin.pl -contig L1.fa -abund L1.abund.tsv -out L1.binning/L1 -thread 6
 
+### check M
+checkm lineage_wf <bin folder> <output folder>
+
 ### co-assembly startgy by SPAdes
 mkdir L1.spades
 cd L1.spades
@@ -48,9 +51,16 @@ pigz -d -c  ../*1.fq.gz | pigz -c > merged.R1.fq.gz
 pigz -d -c  ../*2.fq.gz | pigz -c > merged.R2.fq.gz
 
 # try
+### bbnorm
+loglog.sh in1=merged.R1.fq in2=merged.R2.fq
+bbnorm.sh in1=merged.R1.fq in2=merged.R2.fq out=highpass.fq outt=lowpass.fq passes=1 target=999999999 min=5 -Xmx250g threads=40
+### bbmerge
+# It is designed for kmer-based operations using Tadpole, which include both merging overlapping and non-overlapping reads, kmer-based error-correction, and kmer-based filtering. 
+# Kmer-based operations should only be used with shotgun (randomly-fragmented) libraries, never with amplicon libraries (such as 16S).
+#  If you run BBMerge, and under, say, 15% of the reads merge, even at very loose stringency, it’s probably a waste of time to merge – you’ll just make the workflow more complicated, and possibly get a lot of false-positives. Also, don’t try to merge single-ended libraries or long-mate-pair libraries that are not in an “innie” orientation.
 pigz -d -c -k merged.R1.fq.gz > merged.R1.fq
 pigz -d -c -k merged.R2.fq.gz > merged.R2.fq
-bbmerge-auto.sh in=reads.fq out=merged.fq outu=unmerged.fq rem extend2=50 k=62
+bbmerge-auto.sh in1=merged.R1.fq in2=merged.R2.fq out=bbmerge.fq outu=unmerged.fq rem extend2=50 k=62 -Xmx250g -t=40
 # spades (use less cores for safe!)
 spades.py --meta -1 merged.R1.fq.gz -2 merged.R2.fq.gz -o L1 --threads 8 -m 150
 
