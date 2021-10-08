@@ -56,8 +56,10 @@ pigz -d -c  ../*2.fq.gz | pigz -c > merged.R2.fq.gz
 
 ### take a try
 ### bbnorm
+### bbnorm to adjust coverage will be good for spades:
+### http://seqanswers.com/forums/showthread.php?t=49763
 # loglog.sh in1=merged.R1.fq in2=merged.R2.fq # ~60G 5000s
-bbnorm.sh in1=merged.R1.fq in2=merged.R2.fq out=highpass.fq outt=lowpass.fq passes=1 target=999999999 min=5 -Xmx250g threads=40 # consume 230G memory actually, ~3 hours
+bbnorm.sh in1=merged.R1.fq in2=merged.R2.fq out=highpass.fq outt=lowpass.fq passes=1 target=40 min=5 -Xmx250g threads=40 # consume 230G memory actually, ~3 hours
 # after bbnorm, files been interleaved
 bbmerge-auto.sh in=highpass.fq out=bbmerge.fq outu=unmerged.fq rem extend2=50 k=62 -Xmx250g -t=40
 spades.py --meta --12 bbmerge.fq -o L1 --threads 8 -m 250
@@ -75,7 +77,7 @@ ls -d *.R1.fq.gz | cut -d '.' -f1 > L1_list.txt
 ### bbduk + bbmap
 parallel -j 11 --xapply 'bbduk.sh in1={1}.R1.fq.gz in2={1}.R2.fq.gz out={1}.rmadp.fq ref=~/bbmap_resources/adapters.fa ktrim=r k=23 mink=11 hdist=1 -t=6 tpe tbo' :::: L1_list.txt
 parallel -j 11 --xapply 'bbduk.sh in={1}.rmadp.fq out={1}.qc.fq qtrim=r trimq=20 maq=20 -t=6' :::: L1_list.txt
-parallel -j 11 --xapply 'bbduk.sh in={1}.qc.fq out={1}.clean.fq ref=~/bbmap_resources/phix.fa k=31 hdist=1 stats=stats.txt -t=6' :::: L1_list.txt
+parallel -j 11 --xapply 'bbduk.sh in={1}.qc.fq out={1}.clean.fq ref=~/bbmap_resources/phix.fa k=31 hdist=1 stats={1}.stats.txt -t=6' :::: L1_list.txt
 #To index and map at the same time:
 # To build an index in-memory without writing to disk:
 # bbmap.sh in=${i}.qc.fq out=${i}.mapped.sam ref=ref.fa nodisk -t=40
