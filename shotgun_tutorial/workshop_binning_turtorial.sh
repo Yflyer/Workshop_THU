@@ -44,9 +44,31 @@ conda activate py36
 mkdir L1.binning
 run_MaxBin.pl -contig L1.fa -abund L1.abund.tsv -out L1.binning/L1 -thread 6
 
+### das_genome
+
 ### check M
 checkm lineage_wf <bin folder> <output folder>
 
+# minimum information about a metagenomeassembled genome (MIMAG) standards:
+# high: >90% completeness and <5% contamination, presence of 5S, 16S and 23S rRNA genes, and at least 18 tRNAs;
+# medium: ≥ 50% completeness and <10% contamination.
+# Ref: Recovery of nearly 8,000 metagenome-assembled genomes substantially expands the tree of life
+
+
+### following procedures:
+# rRNA detection: Rfam (INFERNAL V1) cmsearch 1.1.247 (options -Z 1000 --hmmonly --cut_ga)
+# tRNA check: tRNAscan-s.e. v.2.049 using the bacterial tRNA model (option -B)
+
+### Genome dereplication:
+# all-against-all comparison: MinHash
+# clustering: the Mash distance relationships and individual clusters were defined at a cut-off of 0.2
+# dereplicating: dRep V2.2
+
+### functional centric target
+# For example: WLP in actinobacteria:
+# Genome Taxonomy Database (GTDB)-Tk: de_novo_wf --outgroup_taxon p__Chloroflexota --taxa_filter p__Actinobacteria --bac120_ms
+
+############################### co-assembly #####################################
 ### co-assembly startgy by SPAdes
 mkdir L1.spades
 cd L1.spades
@@ -90,23 +112,3 @@ bbduk.sh in=reads.fq out=unmatched.fq outm=matched.fq ref=phix.fa k=31 hdist=1 s
 # It is designed for kmer-based operations using Tadpole, which include both merging overlapping and non-overlapping reads, kmer-based error-correction, and kmer-based filtering.
 # Kmer-based operations should only be used with shotgun (randomly-fragmented) libraries, never with amplicon libraries (such as 16S).
 #  If you run BBMerge, and under, say, 15% of the reads merge, even at very loose stringency, it’s probably a waste of time to merge – you’ll just make the workflow more complicated, and possibly get a lot of false-positives. Also, don’t try to merge single-ended libraries or long-mate-pair libraries that are not in an “innie” orientation.
-
-
-# minimum information about a metagenomeassembled genome (MIMAG) standards:
-# high: >90% completeness and <5% contamination, presence of 5S, 16S and 23S rRNA genes, and at least 18 tRNAs;
-# medium: ≥ 50% completeness and <10% contamination.
-# Ref: Recovery of nearly 8,000 metagenome-assembled genomes substantially expands the tree of life
-
-
-### following procedures:
-# rRNA detection: Rfam (INFERNAL V1) cmsearch 1.1.247 (options -Z 1000 --hmmonly --cut_ga)
-# tRNA check: tRNAscan-s.e. v.2.049 using the bacterial tRNA model (option -B)
-
-### Genome dereplication:
-# all-against-all comparison: MinHash
-# clustering: the Mash distance relationships and individual clusters were defined at a cut-off of 0.2
-# dereplicating: dRep V2.2
-
-### functional centric target
-# For example: WLP in actinobacteria:
-# Genome Taxonomy Database (GTDB)-Tk: de_novo_wf --outgroup_taxon p__Chloroflexota --taxa_filter p__Actinobacteria --bac120_ms
