@@ -87,11 +87,10 @@ trimmomatic
 adapter sequence files包括seq2和seq3，使用最新的seq3版本  
 multiqc  
 
-## 3. *De novo* Assembly
+## 3.  Assembly and Binning
+conda create -n concoct concoct
+conda create -n metabat2 metabat2
 
-### *About Linux*
-find
-grep
 
 ## 4. toolkit env config
 ### kingfisher
