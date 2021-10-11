@@ -108,6 +108,15 @@ mkdir tests/test_data/integration_test_data
 tar -xvzf v1.0.tar.gz -C tests/test_data/integration_test_data --strip-components=1
 python setup.py install
 
+# das-tools
+# R-bug for individual user
+# mannually install to debug
+install.packages("iterators",repo="https://mirrors.tuna.tsinghua.edu.cn/CRAN/")
+install.packages("codetools",repo="https://mirrors.tuna.tsinghua.edu.cn/CRAN/")
+install.packages("foreach",repo="https://mirrors.tuna.tsinghua.edu.cn/CRAN/")
+install.packages("doMC",repo="https://mirrors.tuna.tsinghua.edu.cn/CRAN/")
+install.packages("data.table",repo="https://mirrors.tuna.tsinghua.edu.cn/CRAN/")
+
 ## 4. toolkit env config
 ### kingfisher
 conda create -c conda-forge -c bioconda -n kingfisher pigz python extern curl sra-tools pandas requests aria2conda activate kingfisher

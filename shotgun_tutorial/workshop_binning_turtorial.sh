@@ -50,7 +50,7 @@ conda activate metabat2
 
 runMetaBat.sh -t 20 -m 1500 -o L1.metabat/L1 L1/L1.fa L1/L1/*.bam
 metabat2 -i L1/L1.fa -a L1.fa.depth.txt -t 6 -m 1500 -o L1.metabat/L1
-runMetaBat.sh -t 20 -m 1500 -o ${i}.metabat/${i} ${i}/${i}.fa 
+runMetaBat.sh -t 20 -m 1500 -o ${i}.metabat/${i} ${i}/${i}.fa
 
 ls -ad L* > site_list.txt
 while read i; do
@@ -59,6 +59,8 @@ jgi_summarize_bam_contig_depths --outputDepth ${i}.fa.depth.txt ${i}/${i}/*.bam
 metabat2 -i ${i}/${i}.fa -a ${i}.fa.depth.txt -t 20 -m 1500 -o ${i}.metabat/${i}
 done <site_list.txt
 
+#
+metawrap binning -o L1_concoct -t 20 -a L1/L1.fa --concoct --interleaved L1/*.fastq
 # concot
 cut_up_fasta.py L1/L1.fa -c 10000 -o 0 --merge_last -b L1_10K.bed > L1_10K.fa
 concoct_coverage_table.py L1_10K.bed L1/L1/*.bam > L1_concoct_table.tsv
@@ -70,6 +72,19 @@ extract_fasta_bins.py L1/L1.fa L1_concoct/L1_clustering_merged.csv --output_path
 
 
 ### das_genome
+conda activate das_tool
+Fasta_to_Scaffolds2Bin.sh -i L1.maxbin/ -e fasta > L1.maxbin2das.tsv
+Fasta_to_Scaffolds2Bin.sh -i L1.metabat/ -e fasta > L1.metabat2das.tsv
+
+parallel -j 4 --xapply 'Fasta_to_Scaffolds2Bin.sh -i {1}.metabat -e fa > {1}.metabat2das.tsv' :::: site_list.txt
+parallel -j 4 --xapply 'Fasta_to_Scaffolds2Bin.sh -i {1}.maxbin -e fasta > {1}.maxbin2das.tsv' :::: site_list.txt
+
+DAS_Tool -i L1.metabat2das.tsv,L1.maxbin2das.tsv -l metabat,maxbin -c L1/L1.fa -o L1.dastool -t 15
+
+while read i; do
+  mkdir ${i}.dastool
+  DAS_Tool -i ${i}.metabat2das.tsv,${i}.maxbin2das.tsv -l metabat,maxbin -c ${i}/${i}.fa -o ${i}.dastool/${i} -t 12 --write_bins 1
+done <site_list.txt
 
 ### check M
 checkm lineage_wf <bin folder> <output folder>
@@ -130,7 +145,7 @@ ln -s ../../01_bbmap/L1/*.clean.fq .
 ln -s ../../01_bbmap/L1/L1_list.txt .
 # parallel bbnorm on individual samples
 parallel -j 2 --xapply 'bbnorm.sh in={}.clean.fq out={}.bnorm.fq passes=1 target=999999999 min=2 -Xmx120g threads=10' :::: L1_list.txt
-# or 
+# or
 while read prefix; do
   bbnorm.sh in=${prefix}.clean.fq out=${prefix}.norm.fq passes=1 target=999999999 min=5 -Xmx120g -t=30
 done <L1_list.txt
