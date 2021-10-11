@@ -44,6 +44,7 @@ conda activate py36
 # maxbin
 mkdir L1.maxbin
 run_MaxBin.pl -contig L1.fa -abund L1.abund.tsv -out L1.maxbin/L1 -thread 6
+
 # metabat
 conda activate metabat2
 
@@ -58,10 +59,14 @@ jgi_summarize_bam_contig_depths --outputDepth ${i}.fa.depth.txt ${i}/${i}/*.bam
 metabat2 -i ${i}/${i}.fa -a ${i}.fa.depth.txt -t 20 -m 1500 -o ${i}.metabat/${i}
 done <site_list.txt
 
-#
-jgi_summarize_bam_contig_depths --outputDepth test.txt L1/L1/L1.L1-H0.R1.bam
 # concot
-# ESOM
+cut_up_fasta.py L1/L1.fa -c 10000 -o 0 --merge_last -b L1_10K.bed > L1_10K.fa
+concoct_coverage_table.py L1_10K.bed L1/L1/*.bam > L1_concoct_table.tsv
+concoct --composition_file L1_10K.fa --coverage_file L1_concoct_table.tsv -b L1_concoct/
+merge_cutup_clustering.py L1_concoct/L1_clustering_gt1000.csv > L1_concoct/L1_clustering_merged.csv
+mkdir L1_concoct/fasta_bins
+extract_fasta_bins.py L1/L1.fa L1_concoct/L1_clustering_merged.csv --output_path L1_concoct/fasta_bins
+# ESOM: waiting for update, because three methods is sufficient for das-tool comparison
 
 
 ### das_genome

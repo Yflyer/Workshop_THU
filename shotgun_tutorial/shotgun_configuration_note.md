@@ -89,8 +89,24 @@ multiqc
 
 ## 3.  Assembly and Binning
 conda create -n concoct concoct
-conda create -n metabat2 metabat2
 
+# lib error in concoct
+# conda环境进入所在环境bin下pip install mkl
+/vd03/home/public_conda_envs/concoct_env/bin pip install mkl
+conda create -n metabat2 metabat2
+# test
+cd /vd03/home/public_conda_envs/concoct_env/bin
+nosetests
+# manual install
+pip install --upgrade pip
+sudo apt-get update -qq
+sudo apt-get install -qq build-essential libgsl0-dev bedtools mummer samtools
+export DISPLAY=:99.0
+pip install -r requirements.txt
+wget https://github.com/BinPro/integration_test_data/archive/v1.0.tar.gz
+mkdir tests/test_data/integration_test_data
+tar -xvzf v1.0.tar.gz -C tests/test_data/integration_test_data --strip-components=1
+python setup.py install
 
 ## 4. toolkit env config
 ### kingfisher
