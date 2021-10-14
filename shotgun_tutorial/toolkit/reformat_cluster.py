@@ -1,4 +1,7 @@
-import numpy as np
+#!/usr/bin/env python
+# -*- coding:utf-8 -*-
+# Yufei,2021
+# github.com/Yflyer
 import pandas as pd
 import os,time,argparse,sys
 #########################

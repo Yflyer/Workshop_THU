@@ -79,7 +79,7 @@ Fasta_to_Scaffolds2Bin.sh -i L1.metabat/ -e fasta > L1.metabat2das.tsv
 parallel -j 4 --xapply 'Fasta_to_Scaffolds2Bin.sh -i {1}.metabat -e fa > {1}.metabat2das.tsv' :::: site_list.txt
 parallel -j 4 --xapply 'Fasta_to_Scaffolds2Bin.sh -i {1}.maxbin -e fasta > {1}.maxbin2das.tsv' :::: site_list.txt
 
-DAS_Tool -i L1.metabat2das.tsv,L1.maxbin2das.tsv -l metabat,maxbin -c L1/L1.fa -o L1.dastool -t 15
+DAS_Tool -i L1.metabat2das.tsv,L1.maxbin2d as.tsv -l metabat,maxbin -c L1/L1.fa -o L1.dastool -t 15
 
 while read i; do
   mkdir ${i}.dastool
@@ -87,7 +87,13 @@ while read i; do
 done <site_list.txt
 
 ### check M
-checkm lineage_wf <bin folder> <output folder>
+checkm lineage_wf -x fa -t 8 -f test.tsv --tab_table L1.dastool/L1_DASTool_bins L1.checkm
+### check M for CPR:
+# Identify marker genes in bins and calculate genome statistics
+checkm analyze -x fa -t 8 ~/hmm_sets/cpr_43_markers.hmm L1.dastool/L1_DASTool_bins L1.checkm.cpr
+# Assess bins for contamination and completeness.
+checkm qa -t 8 -o 1 -f test.cpr.tsv --tab_table ~/hmm_sets/cpr_43_markers.hmm L1.checkm.cpr
+
 
 # minimum information about a metagenomeassembled genome (MIMAG) standards:
 # high: >90% completeness and <5% contamination, presence of 5S, 16S and 23S rRNA genes, and at least 18 tRNAs;
