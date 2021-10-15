@@ -60,7 +60,6 @@ metabat2 -i ${i}/${i}.fa -a ${i}.fa.depth.txt -t 20 -m 1500 -o ${i}.metabat/${i}
 done <site_list.txt
 
 #
-metawrap binning -o L1_concoct -t 20 -a L1/L1.fa --concoct --interleaved L1/*.fastq
 # concot
 cut_up_fasta.py L1/L1.fa -c 10000 -o 0 --merge_last -b L1_10K.bed > L1_10K.fa
 concoct_coverage_table.py L1_10K.bed L1/L1/*.bam > L1_concoct_table.tsv
@@ -70,29 +69,40 @@ mkdir L1_concoct/fasta_bins
 extract_fasta_bins.py L1/L1.fa L1_concoct/L1_clustering_merged.csv --output_path L1_concoct/fasta_bins
 # ESOM: waiting for update, because three methods is sufficient for das-tool comparison
 
+# metawrap
+metawrap binning -o ${i}.metawrap -t 20 -a ${i}/${i}.contigs.fa --metabat2 --maxbin2 --concoct --interleaved ${i}/*.fastq
+
 
 ### das_genome
 conda activate das_tool
 Fasta_to_Scaffolds2Bin.sh -i L1.maxbin/ -e fasta > L1.maxbin2das.tsv
 Fasta_to_Scaffolds2Bin.sh -i L1.metabat/ -e fasta > L1.metabat2das.tsv
-
 parallel -j 4 --xapply 'Fasta_to_Scaffolds2Bin.sh -i {1}.metabat -e fa > {1}.metabat2das.tsv' :::: site_list.txt
 parallel -j 4 --xapply 'Fasta_to_Scaffolds2Bin.sh -i {1}.maxbin -e fasta > {1}.maxbin2das.tsv' :::: site_list.txt
 
 DAS_Tool -i L1.metabat2das.tsv,L1.maxbin2d as.tsv -l metabat,maxbin -c L1/L1.fa -o L1.dastool -t 15
 
+# LOOP
+ls -d L* | cut -d '.' -f1 > site_list.txt
 while read i; do
   mkdir ${i}.dastool
   DAS_Tool -i ${i}.metabat2das.tsv,${i}.maxbin2das.tsv -l metabat,maxbin -c ${i}/${i}.fa -o ${i}.dastool/${i} -t 12 --write_bins 1
 done <site_list.txt
 
 ### check M
-checkm lineage_wf -x fa -t 8 -f test.tsv --tab_table L1.dastool/L1_DASTool_bins L1.checkm
+# pplacer_threads: number of threads used by pplacer (memory usage increases)
+# nt: generate nucleotide gene sequences for each bin
+checkm lineage_wf --nt -x fa -t 8 --pplacer_threads 4 -f test.tsv --tab_table L1.dastool/L1_DASTool_bins L1.checkm
 ### check M for CPR:
 # Identify marker genes in bins and calculate genome statistics
 checkm analyze -x fa -t 8 ~/hmm_sets/cpr_43_markers.hmm L1.dastool/L1_DASTool_bins L1.checkm.cpr
 # Assess bins for contamination and completeness.
 checkm qa -t 8 -o 1 -f test.cpr.tsv --tab_table ~/hmm_sets/cpr_43_markers.hmm L1.checkm.cpr
+
+# LOOP
+while read i; do
+  checkm lineage_wf --nt -x fa -t 8 --pplacer_threads 4 -f ${i}.check.tsv --tab_table ${i}.dastool/{i}_DASTool_bins ${i}.checkm
+done <site_list.txt
 
 
 # minimum information about a metagenomeassembled genome (MIMAG) standards:
