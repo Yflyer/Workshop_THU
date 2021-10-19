@@ -104,7 +104,9 @@ while read i; do
   checkm lineage_wf --nt -x fa -t 8 --pplacer_threads 4 -f ${i}.check.tsv --tab_table ${i}.dastool/{i}_DASTool_bins ${i}.checkm
 done <site_list.txt
 
-
+# process checkM result by awk command
+awk '$13 > 50 && $14 <10 {print $1,$13,$14}' L1.check.tsv # get MIMAG
+awk '$13 > 50 && $14 <10 {printf "%s\t%s\t%s\t%s\n","L1",$1,$13,$14}' L1.check.tsv # get MIMAG
 # minimum information about a metagenomeassembled genome (MIMAG) standards:
 # high: >90% completeness and <5% contamination, presence of 5S, 16S and 23S rRNA genes, and at least 18 tRNAs;
 # medium: ≥ 50% completeness and <10% contamination.
