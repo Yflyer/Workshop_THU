@@ -148,6 +148,34 @@ conda activate py27
 
 ###  checkM-genome
 conda activate py36
+
+### GTDB
+conda create -n gtdbtk-1.7 -c conda-forge -c bioconda gtdbtk=1.7.0
+
+GTDB-Tk v1.7.0 requires ~40G of external data which needs to be downloaded
+and unarchived. This can be done automatically, or manually:
+
+1. Run the command download-db.sh to automatically download to:
+   /BIGDATA2/thu_yfyang_1/conda_env/env/gtdbtk-1.7/share/gtdbtk-1.7.0/db/
+
+2. Manually download the latest reference data:
+   https://github.com/Ecogenomics/GTDBTk#gtdb-tk-reference-data
+
+2b. Set the GTDBTK_DATA_PATH environment variable in the file:
+    /BIGDATA2/thu_yfyang_1/conda_env/env/gtdbtk-1.7/etc/conda/activate.d
+
+wget -c https://data.ace.uq.edu.au/public/gtdb/data/releases/latest/auxillary_files/gtdbtk_data.tar.gz
+
+mkdir -p ~/db/gtdb & cd ~/db/gtdb
+# 下载解压
+wget -c https://data.ace.uq.edu.au/public/gtdb/data/releases/latest/auxillary_files/gtdbtk_data.tar.gz
+tar zxvf gtdbtk_data.tar.gz
+# 设置数据库位置，注意修改软件安装位置
+locate gtdbtk.sh # 查找配置文件位置
+# 修改PATH=后面的路径为数据库解压目录，如/home/meta/db/gtdb/release95/
+vim /conda/envs/gtdbtk/etc/conda/activate.d/gtdbtk.sh
+
+
 pip3 install numpy
 pip3 install matplotlib
 pip3 install pysam
