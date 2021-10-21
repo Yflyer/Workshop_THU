@@ -104,19 +104,81 @@ while read i; do
   checkm lineage_wf --nt -x fa -t 8 --pplacer_threads 4 -f ${i}.check.tsv --tab_table ${i}.dastool/{i}_DASTool_bins ${i}.checkm
 done <site_list.txt
 
-# process checkM result by awk command
-awk '$13 > 50 && $14 <10 {print $1,$13,$14}' L1.check.tsv # get MIMAG
-awk '$13 > 50 && $14 <10 {printf "%s\t%s\t%s\t%s\n","L1",$1,$13,$14}' L1.check.tsv # get MIMAG
+### mimag selection
 # minimum information about a metagenomeassembled genome (MIMAG) standards:
 # high: >90% completeness and <5% contamination, presence of 5S, 16S and 23S rRNA genes, and at least 18 tRNAs;
 # medium: ≥ 50% completeness and <10% contamination.
 # Ref: Recovery of nearly 8,000 metagenome-assembled genomes substantially expands the tree of life
+# rename file and seqs in dastool output
+while read i; do
+  #echo *.dastool/*_DASTool_bins/${i}.fa
+  #sed -i "s/>/>${i}\_/1" ${i}.dastool/${i}_DASTool_bins/*.fa
+  cd ${i}.dastool/${i}_DASTool_bins
+  for m in *.fa
+  do
+    mv ${m} ${i}_${m}
+  done
+  cd ../..
+  #mv ${i}.dastool/${i}_DASTool_bins/*.fa ${i}.dastool/${i}_DASTool_bins/${i}_*.fa
+done <site_list.txt
+
+# process checkM result by awk command
+touch MIMAG.tsv
+while read i; do
+  awk -v var=${i} '$13 > 50 && $14 <10 {printf "%s\t%s\t%s\t%s\t%s\n",var,var"_"$1,$2,$13,$14}' ${i}.check.tsv >> MIMAG.tsv
+done <site_list.txt
+
+# get MIMAG by checkM from DAStool
+cat MIMAG.tsv | cut -f 1-2 > MIMAG_list.txt
+awk '{print $1".dastool/"$1"_DASTool_bins/"$2".fa";}' MIMAG.tsv > MIMAG_list.txt
+
+
+# awk '$13 > 50 && $14 <10 {print $1,$13,$14}' L1.check.tsv # get MIMAG
+# awk '$13 > 90 && $14 <5 {printf "%s/t%s/t%s/t%s/t%s/n" $1,$2,$13,$14}' *.check.tsv # get MIMAG
+# awk '$13 > 50 && $14 <10 {print $1,$2,$13,$14}' *.check.tsv > MIMAG.tsv
 
 ### Taxanomy annotation of binning genome: tools, biomes, data features, reference, and notes.
 # GTDB  soils  bacterial binned metagenome  EM: similar functional profiles of CPR phyla in soils  2020 citation 677
 # Phylosift  hydrothermal_sediments prokayotic binned metagenome  NC: expansive metabolic versatility in GB hydrothermal sediments  Only phylogeny?
 # mOTUs marker  Ocean  read-based genes mapping  Science: Structure and function of the globalocean microbiome 2019 citation 123
 # Metaxa2  soils read- or contig- based 16s NM: Candidatus Udaeobacter copiosus
+
+### taxa anotation: GTDB ###
+mkdir 07_taxa 
+cd 07_taxa
+ln -s ../06_bin/MIMAG_list.txt .
+# cp MIMAG
+mkdir mimag
+while read i; do
+  cp ../06_bin/${i} mimag
+done <MIMAG_list.txt
+
+conda activate gtdbtk-1.5.0
+gtdbtk classify_wf --cpus 48 -x fa --pplacer_cpus 20 --genome_dir mimag --out_dir gtdb_result
+
+cd ..
+### cazy annotation
+
+mkdir 08_dbcan
+cd 08_dbcan
+# use protein sequence to find CGCs
+ln -s ../07_taxa/mimag .
+cd mimag
+conda activate run_dbcan
+for i in *.fa
+do
+  run_dbcan.py ${i} meta --out_dir ${i/\.fa/} --db_dir /vd03/home/MetaDatabase/dbcan --dia_cpu 16 --hmm_cpu 16 --tf_cpu 16 --hotpep_cpu 16
+done
+
+cat mimag/*.fa > totalMAG.fa
+mkdir reads
+ln -s ../01_bbmap/*fq reads/
+conda activate coverM
+
+# Dereplicate at 99% (after pre-clustering at 95%) a directory of .fna
+coverm cluster -x fa -t 60 --genome-fasta-directory mimag --output-representative-fasta-directory drep_mimag --output-cluster-definition mimag_clusters.tsv
+# cal cov
+coverm genome -t 60 --interleaved reads/*fq -x fa --genome-fasta-directory mimag --bam-file-cache-directory mimag_bam -o MAG_coverage.tsv
 
 ### following procedures:
 # rRNA detection: Rfam (INFERNAL V1) cmsearch 1.1.247 (options -Z 1000 --hmmonly --cut_ga)
