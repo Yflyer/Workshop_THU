@@ -131,11 +131,7 @@ done <site_list.txt
 # get MIMAG by checkM from DAStool
 cat MIMAG.tsv | cut -f 1-2 > MIMAG_list.txt
 awk '{print $1".dastool/"$1"_DASTool_bins/"$2".fa";}' MIMAG.tsv > MIMAG_list.txt
-
-
-# awk '$13 > 50 && $14 <10 {print $1,$13,$14}' L1.check.tsv # get MIMAG
-# awk '$13 > 90 && $14 <5 {printf "%s/t%s/t%s/t%s/t%s/n" $1,$2,$13,$14}' *.check.tsv # get MIMAG
-# awk '$13 > 50 && $14 <10 {print $1,$2,$13,$14}' *.check.tsv > MIMAG.tsv
+awk '{print $2;}' MIMAG.tsv | cut -d '_' -f1,2 --output-delimiter=' ' | awk '{print $1".checkm/bins/"$2;}' > MIMAG_checkm.list
 
 ### Taxanomy annotation of binning genome: tools, biomes, data features, reference, and notes.
 # GTDB  soils  bacterial binned metagenome  EM: similar functional profiles of CPR phyla in soils  2020 citation 677
@@ -163,6 +159,8 @@ mkdir 08_dbcan
 cd 08_dbcan
 # use protein sequence to find CGCs
 ln -s ../07_taxa/mimag .
+ln -s ../06_bin/MIMAG_list.txt .
+
 cd mimag
 conda activate run_dbcan
 for i in *.fa
@@ -170,6 +168,31 @@ do
   run_dbcan.py ${i} meta --out_dir ${i/\.fa/} --db_dir /vd03/home/MetaDatabase/dbcan --dia_cpu 16 --hmm_cpu 16 --tf_cpu 16 --hotpep_cpu 16
 done
 
+ls -d * > fna_list.txt
+awk 'NR>1 {print $0;}' overview.txt | awk '$5 > 2 {print $2;}' | cut -d '(' -f1 | cut -d '_' -f1 | paste -s -d ';'
+
+touch cazy_result.tsv
+while read i; do
+  gene=$(awk 'NR>1 {print $0;}' ${i}/overview.txt | awk '$5 > 2 {print $2;}' | cut -d '(' -f1 | cut -d '_' -f1 | paste -s -d ';')
+  echo $i $gene >> cazy_result.tsv
+done <fna_list.txt
+
+
+#################  KOfam  ################
+#在国家微生物科学数据中心网站可以下载最新版2019年KOfam ko_list和profiles （KEGG Orthologs（KOs）的定制HMM数据库）为用户的序列数据的搜索，通过将用户的序列数据与KEGG路径和EC编号联系起来，得到注释结果。
+mkdir orf
+conda activate py36
+ln -s ../../06_bin/MIMAG_checkm.list
+while read i; do
+  cp -r ../../06_bin/${i}* .
+done <MIMAG_checkm.list
+
+for i in $(ls -d *); do
+    exec_annotation -f  detail-tsv -E 1e-5 --profile /vd03/home/MetaDatabase/KOfam_2019/Kofam/profiles/ --ko-list /vd03/home/MetaDatabase/KOfam_2019/Kofam/ko_list --cpu 48 --tmp-dir ./ko_tmp -o ${i}_kofam.txt ${i}/genes.fna
+done
+
+
+### genome coverage
 cat mimag/*.fa > totalMAG.fa
 mkdir reads
 ln -s ../01_bbmap/*fq reads/
