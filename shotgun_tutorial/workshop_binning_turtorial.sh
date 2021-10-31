@@ -144,13 +144,21 @@ mkdir 07_taxa
 cd 07_taxa
 ln -s ../06_bin/MIMAG_list.txt .
 # cp MIMAG
-mkdir mimag
+mkdir gtdb
 while read i; do
-  cp ../06_bin/${i} mimag
+  cp ../06_bin/${i} gtdb
 done <MIMAG_list.txt
-
 conda activate gtdbtk-1.5.0
-gtdbtk classify_wf --cpus 48 -x fa --pplacer_cpus 20 --genome_dir mimag --out_dir gtdb_result
+gtdbtk classify_wf --cpus 60 -x fa --pplacer_cpus 1 --genome_dir gtdb --out_dir gtdb_result
+# get mimag stat by bbmap
+stats.sh in=$(ls *.fa | paste -s -d ",") format=6 threads=16 addname=t
+statswrapper.sh in=$(ls *.fa | paste -s -d ",") format=6 threads=16 addname=t gc=mimag.gc.txt gcformat=4
+
+# build tree
+# followed by the ‘phylosift align’ mode. The concatenated protein alignments of 37 elite marker genes (concat.updated.1.fasta) were combined for all genomes of interest and trimmed using TrimAL (version 1.2) using the automated1 setting65. A phylogenetic tree was generated using a maximum likelihood-based approach using RAxML (version 8.2.10, called as: raxmlHPC-PTHREADS-AVX -f a -m PROTGAMMAAUTO -N autoMRE)
+# The resulting alignments were stripped of columns containing >95% gap positions. Individual stripped alignments were concatenated and a phylogenetic tree was constructed using RAxML v8.2.1076 on the CIPRES Science Gateway{Miller:vv}. RAxML was called as follows: raxmlHPC-HYBRID -s input -N autoMRE -n result -f a -p 12345 -x 12345 -m PROTCATLG.
+conda activate py36
+raxmlHPC -s gtdbtk.bac120.user_msa.fasta -T 60 -N autoMRE -n test -f a -p 12345 -x 12345 -m PROTCATLG
 
 cd ..
 ### cazy annotation
@@ -187,9 +195,30 @@ while read i; do
   cp -r ../../06_bin/${i}* .
 done <MIMAG_checkm.list
 
+### 48 core, 24 hour, complete nearly 80 binned genome; slowly
 for i in $(ls -d *); do
     exec_annotation -f  detail-tsv -E 1e-5 --profile /vd03/home/MetaDatabase/KOfam_2019/Kofam/profiles/ --ko-list /vd03/home/MetaDatabase/KOfam_2019/Kofam/ko_list --cpu 48 --tmp-dir ./ko_tmp -o ${i}_kofam.txt ${i}/genes.fna
 done
+
+-v var=${i} $13 > 50 && $14 <10 
+awk '{printf $3}' L2.52_kofam.txt
+sed -i "s/K//1" L2.52_kofam.txt
+sed -n '/K00174/p' L2.52_kofam.txt
+
+K00174
+K00169
+K00123
+K00128
+K00001
+K00925
+K01905
+
+K00399
+K00198
+K14138
+K15023
+K00192
+K00195
 
 
 ### genome coverage
@@ -202,6 +231,9 @@ conda activate coverM
 coverm cluster -x fa -t 60 --genome-fasta-directory mimag --output-representative-fasta-directory drep_mimag --output-cluster-definition mimag_clusters.tsv
 # cal cov
 coverm genome -t 60 --interleaved reads/*fq -x fa --genome-fasta-directory mimag --bam-file-cache-directory mimag_bam -o MAG_coverage.tsv
+
+### iTOL
+# label: tree name
 
 ### following procedures:
 # rRNA detection: Rfam (INFERNAL V1) cmsearch 1.1.247 (options -Z 1000 --hmmonly --cut_ga)
