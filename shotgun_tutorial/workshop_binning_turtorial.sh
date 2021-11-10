@@ -92,6 +92,13 @@ done <site_list.txt
 ### check M
 # pplacer_threads: number of threads used by pplacer (memory usage increases)
 # nt: generate nucleotide gene sequences for each bin
+# (out).0XX.fasta	the XX bin. XX are numbers, e.g. out.001.fasta
+# (out).summary	summary file describing which contigs are being classified into which bin.
+# (out).log	log file recording the core steps of MaxBin algorithm
+# (out).marker	marker gene presence numbers for each bin. This table is ready to be plotted by R or other 3rd-party software.
+# (out).marker.pdf	visualization of the marker gene presence numbers using R
+# (out).noclass	all sequences that pass the minimum length threshold but are not classified successfully.
+# (out).tooshort	all sequences that do not meet the minimum length threshold.
 checkm lineage_wf --nt -x fa -t 8 --pplacer_threads 4 -f test.tsv --tab_table L1.dastool/L1_DASTool_bins L1.checkm
 ### check M for CPR:
 # Identify marker genes in bins and calculate genome statistics
@@ -160,66 +167,6 @@ statswrapper.sh in=$(ls *.fa | paste -s -d ",") format=6 threads=16 addname=t gc
 conda activate py36
 raxmlHPC -s gtdbtk.bac120.user_msa.fasta -T 60 -N autoMRE -n test -f a -p 12345 -x 12345 -m PROTCATLG
 
-cd ..
-### cazy annotation
-
-mkdir 08_dbcan
-cd 08_dbcan
-# use protein sequence to find CGCs
-ln -s ../07_taxa/mimag .
-ln -s ../06_bin/MIMAG_list.txt .
-
-cd mimag
-conda activate run_dbcan
-for i in *.fa
-do
-  run_dbcan.py ${i} meta --out_dir ${i/\.fa/} --db_dir /vd03/home/MetaDatabase/dbcan --dia_cpu 16 --hmm_cpu 16 --tf_cpu 16 --hotpep_cpu 16
-done
-
-ls -d * > fna_list.txt
-awk 'NR>1 {print $0;}' overview.txt | awk '$5 > 2 {print $2;}' | cut -d '(' -f1 | cut -d '_' -f1 | paste -s -d ';'
-
-touch cazy_result.tsv
-while read i; do
-  gene=$(awk 'NR>1 {print $0;}' ${i}/overview.txt | awk '$5 > 2 {print $2;}' | cut -d '(' -f1 | cut -d '_' -f1 | paste -s -d ';')
-  echo $i $gene >> cazy_result.tsv
-done <fna_list.txt
-
-
-#################  KOfam  ################
-#在国家微生物科学数据中心网站可以下载最新版2019年KOfam ko_list和profiles （KEGG Orthologs（KOs）的定制HMM数据库）为用户的序列数据的搜索，通过将用户的序列数据与KEGG路径和EC编号联系起来，得到注释结果。
-mkdir orf
-conda activate py36
-ln -s ../../06_bin/MIMAG_checkm.list
-while read i; do
-  cp -r ../../06_bin/${i}* .
-done <MIMAG_checkm.list
-
-### 48 core, 24 hour, complete nearly 80 binned genome; slowly
-for i in $(ls -d *); do
-    exec_annotation -f  detail-tsv -E 1e-5 --profile /vd03/home/MetaDatabase/KOfam_2019/Kofam/profiles/ --ko-list /vd03/home/MetaDatabase/KOfam_2019/Kofam/ko_list --cpu 48 --tmp-dir ./ko_tmp -o ${i}_kofam.txt ${i}/genes.fna
-done
-
--v var=${i} $13 > 50 && $14 <10 
-awk '{printf $3}' L2.52_kofam.txt
-sed -i "s/K//1" L2.52_kofam.txt
-sed -n '/K00174/p' L2.52_kofam.txt
-
-K00174
-K00169
-K00123
-K00128
-K00001
-K00925
-K01905
-
-K00399
-K00198
-K14138
-K15023
-K00192
-K00195
-
 
 ### genome coverage
 cat mimag/*.fa > totalMAG.fa
@@ -232,12 +179,13 @@ coverm cluster -x fa -t 60 --genome-fasta-directory mimag --output-representativ
 # cal cov
 coverm genome -t 60 --interleaved reads/*fq -x fa --genome-fasta-directory mimag --bam-file-cache-directory mimag_bam -o MAG_coverage.tsv
 
-### iTOL
+### ggtree
 # label: tree name
 
 ### following procedures:
 # rRNA detection: Rfam (INFERNAL V1) cmsearch 1.1.247 (options -Z 1000 --hmmonly --cut_ga)
 # tRNA check: tRNAscan-s.e. v.2.049 using the bacterial tRNA model (option -B)
+# Lastly, the presence and completeness of the complement of encoded rRNAs and tRNAs should be used as an additional metric for assembly quality --Minimum information about a (MISAG) and a (MIMAG) of bacteria and archaea
 
 ### Genome dereplication:
 # all-against-all comparison: MinHash

@@ -46,7 +46,7 @@ megahit -1 trimmed.S1_r1.fq.gz -2 trimmed.S1_r2.fq.gz --min-count 2 --k-list 29,
 
 sed -i "s/>/>S1\_/1" S1/S1.contigs.fa
 
-#################   ORF prediciton  #######################
+#################   ORF prediciton by prokka #######################
 ### we used prokka to avoid too much detail
 # time_consuming: ★★☆
 cd ..
@@ -70,6 +70,57 @@ sed -i "s/>/>S1\_/1" S1/S1.faa
 #.log	Contains all the output that Prokka produced during its run. This is a record of what settings you used, even if the --quiet option was enabled.
 #.txt	Statistics relating to the annotated features found.
 #.tsv	Tab-separated file of all features: locus_tag,ftype,len_bp,gene,EC_number,COG,product
+
+##################  CAZymes Annotation   ################
+### we used mmseq to quickly cluster
+# time_consuming: ★★★
+cd ..
+### cazy annotation
+
+mkdir 08_dbcan
+cd 08_dbcan
+# use protein sequence to find CGCs
+ln -s ../07_taxa/mimag .
+ln -s ../06_bin/MIMAG_list.txt .
+
+cd mimag
+conda activate run_dbcan
+for i in *.fa
+do
+  run_dbcan.py ${i} meta --out_dir ${i/\.fa/} --db_dir /vd03/home/MetaDatabase/dbcan --dia_cpu 16 --hmm_cpu 16 --tf_cpu 16 --hotpep_cpu 16
+done
+
+### modifiy result
+ls -d * > fna_list.txt
+awk 'NR>1 {print $0;}' overview.txt | awk '$5 > 2 {print $2;}' | cut -d '(' -f1 | cut -d '_' -f1 | paste -s -d ';'
+
+### merge result
+touch cazy_result.tsv
+while read i; do
+  gene=$(awk 'NR>1 {print $0;}' ${i}/overview.txt | awk '$5 > 2 {print $2;}' | cut -d '(' -f1 | cut -d '_' -f1 | paste -s -d ';')
+  echo $i $gene >> cazy_result.tsv
+done <fna_list.txt
+
+
+#################  KOfam annotation  ################
+# # time_consuming: ★★★★
+#在国家微生物科学数据中心网站可以下载最新版2019年KOfam ko_list和profiles （KEGG Orthologs（KOs）的定制HMM数据库）为用户的序列数据的搜索，通过将用户的序列数据与KEGG路径和EC编号联系起来，得到注释结果。
+mkdir orf
+conda activate py36
+ln -s ../../06_bin/MIMAG_checkm.list
+while read i; do
+  cp -r ../../06_bin/${i}* .
+done <MIMAG_checkm.list
+
+### 48 core, 24 hour, complete nearly 80 binned genome; slowly
+for i in $(ls -d *); do
+    exec_annotation -f  detail-tsv -E 1e-5 --profile /vd03/home/MetaDatabase/KOfam_2019/Kofam/profiles/ --ko-list /vd03/home/MetaDatabase/KOfam_2019/Kofam/ko_list --cpu 48 --tmp-dir ./ko_tmp -o ${i}_kofam.txt ${i}/genes.fna
+done
+
+-v var=${i} $13 > 50 && $14 <10 
+awk '{printf $3}' L2.52_kofam.txt
+sed -i "s/K//1" L2.52_kofam.txt
+sed -n '/K00174/p' L2.52_kofam.txt
 
 ##################   mapping  ################
 ### we used bamm to quickly get mapping and coverage
@@ -139,61 +190,6 @@ reformat_cluster.py -i ffn_cov -c clu.faa.tsv -o ffn.merge.tsv
 mkdir contigs_cov
 cp ../04_mapping/*.contigs.covs.tsv contigs_cov/
 reformat_cluster.py -i contigs_cov -c clu.contigs.tsv -o contigs.merge.tsv
-
-### Bonus: bin your contigs, to get metegenomic-assembly genomes (MAGs) ###
-# time_consuming: ★★★★
-cd ..
-mkdir 06_binning
-cd 06_binning
-### first: get contigs coverage as abundunce file
-ln -s ../02_megahit/*/*.fa ./
-ln -s ../01_cleandata/trimmed* ./
-
-conda activate py27
-bamm make -d S1.contigs.fa -c trimmed.S1_r1.fq.gz trimmed.S1_r2.fq.gz -t 4 --out_folder S1
-bamm parse -c S1.covs.tsv -b S1/S1.contigs.trimmed.S1_r1.bam
-
-awk '{print $1"\t"$3}' S1.covs.tsv | grep -v '^#' > S1.abundance.txt
-
-### second: run maxbin2
-conda activate py36
-run_MaxBin.pl -thread 4 -contig S1.contigs.fa -abund S1.abundance.txt -out S1/S1
-
-### CheckM
-
-# (out).0XX.fasta	the XX bin. XX are numbers, e.g. out.001.fasta
-# (out).summary	summary file describing which contigs are being classified into which bin.
-# (out).log	log file recording the core steps of MaxBin algorithm
-# (out).marker	marker gene presence numbers for each bin. This table is ready to be plotted by R or other 3rd-party software.
-# (out).marker.pdf	visualization of the marker gene presence numbers using R
-# (out).noclass	all sequences that pass the minimum length threshold but are not classified successfully.
-# (out).tooshort	all sequences that do not meet the minimum length threshold.
-
-##################   dbcan   ################
-###
-# time_consuming:
-cd ..
-mkdir 07_dbcan
-# use protein sequence to find CGCs
-ln -s ../03_prokka/*/*.faa ./
-run_dbcan.py S1.faa protein --out_dir S1_dbcan_out/ --db_dir /vd02/home2/Xue/db/ --dia_cpu 10 --hmm_cpu 10 --tf_cpu 10
-# use DNA sequence to find CGCs
-ln -s ../02_megahit/*/*.fa ./
-run_dbcan.py S1.contigs.fa meta --out_dir S1_dbcan_out/ --db_dir /vd02/home2/Xue/db/ --dia_cpu 10 --hmm_cpu 10 --tf_cpu 10
-# dbcan apply hmm, diamond, and hotpep methods to predict CGCs. the CGCs predicted by only one methods are not included
-#
-
-#################  KOfam  ################
-#在国家微生物科学数据中心网站可以下载最新版2019年KOfam ko_list和profiles （KEGG Orthologs（KOs）的定制HMM数据库）为用户的序列数据的搜索，通过将用户的序列数据与KEGG路径和EC编号联系起来，得到注释结果。
-cd ..
-mkdir 08_KOfam
-cd 08_KOfam
-conda activate py36
-
-mkdir ko_tmp S1
-ln -s ../03_prokka/*/*.faa .
-exec_annotation -f  detail-tsv -E 1e-5 --profile /vd03/home/MetaDatabase/KOfam_2019/Kofam/profiles/ --ko-list /vd03/home/MetaDatabase/KOfam_2019/Kofam/ko_list --cpu 20 --tmp-dir ./ko_tmp -o ./S1/S1_kofam.txt ./S1.faa
-
 
 ### singleM - alpha diversity estimation
 ln -s ../0_rawdata/* ./
