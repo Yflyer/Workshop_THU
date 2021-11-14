@@ -25,8 +25,8 @@ screen -s binning
 # individually assembled by IDBA-UD
 mkdir L1
 cd L1
-ln -s ../02_megahit/1-*/*.fa .
-ln -s ../01_cleandata/L1-* .
+ln -s ../../02_megahit/L1_*/*.fa .
+ln -s ../../01_bbmap/L1_* .
 
 ### individual assembly stratgy
 conda activate py36
