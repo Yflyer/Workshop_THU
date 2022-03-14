@@ -195,3 +195,63 @@ coverm genome -t 60 --interleaved reads/*fq -x fa --genome-fasta-directory mimag
 ### functional centric target
 # For example: WLP in actinobacteria:
 # Genome Taxonomy Database (GTDB)-Tk: de_novo_wf --outgroup_taxon p__Chloroflexota --taxa_filter p__Actinobacteria --bac120_ms
+
+
+mkdir 08_dbcan
+cd 08_dbcan
+# use protein sequence to find CGCs
+ln -s ../07_taxa/mimag .
+ln -s ../06_bin/MIMAG_list.txt .
+
+cd mimag
+conda activate run_dbcan
+for i in *.fa
+do
+  run_dbcan.py ${i} meta --out_dir ${i/\.fa/} --db_dir /vd03/home/MetaDatabase/dbcan --dia_cpu 16 --hmm_cpu 16 --tf_cpu 16 --hotpep_cpu 16
+done
+
+### modifiy result
+ls -d * > fna_list.txt
+awk 'NR>1 {print $0;}' overview.txt | awk '$5 > 2 {print $2;}' | cut -d '(' -f1 | cut -d '_' -f1 | paste -s -d ';'
+
+### merge result
+touch cazy_result.tsv
+while read i; do
+  gene=$(awk 'NR>1 {print $0;}' ${i}/overview.txt | awk '$5 > 2 {print $2;}' | cut -d '(' -f1 | cut -d '_' -f1 | paste -s -d ';')
+  echo $i $gene >> cazy_result.tsv
+done <fna_list.txt
+
+
+#################  KOfam annotation  ################
+# # time_consuming: ★★★★
+#在国家微生物科学数据中心网站可以下载最新版2019年KOfam ko_list和profiles （KEGG Orthologs（KOs）的定制HMM数据库）为用户的序列数据的搜索，通过将用户的序列数据与KEGG路径和EC编号联系起来，得到注释结果。
+mkdir orf
+conda activate py36
+ln -s ../../06_bin/MIMAG_checkm.list
+while read i; do
+  cp -r ../../06_bin/${i}* .
+done <MIMAG_checkm.list
+
+### 48 core, 24 hour, complete nearly 80 binned genome; slowly
+for i in $(ls -d *); do
+    exec_annotation -f  detail-tsv -E 1e-5 --profile /vd03/home/MetaDatabase/KOfam_2019/Kofam/profiles/ --ko-list /vd03/home/MetaDatabase/KOfam_2019/Kofam/ko_list --cpu 48 --tmp-dir ./ko_tmp -o ${i}_kofam.txt ${i}/genes.fna
+done
+
+-v var=${i} $13 > 50 && $14 <10 
+awk '{printf $3}' L2.52_kofam.txt
+sed -i "s/K//1" L2.52_kofam.txt
+sed -n '/K00174/p' L2.52_kofam.txt
+
+
+# merge table
+mkdir ffn_cov
+cp ../04_mapping/*ffn.covs.tsv ffn_cov/
+reformat_cluster.py -i ffn_cov -c clu.faa.tsv -o ffn.merge.tsv
+
+mkdir contigs_cov
+cp ../04_mapping/*.contigs.covs.tsv contigs_cov/
+reformat_cluster.py -i contigs_cov -c clu.contigs.tsv -o contigs.merge.tsv
+
+### singleM - alpha diversity estimation
+ln -s ../0_rawdata/* ./
+singlem pipe --forward trimmed.S1_r1.fq.gz --reverse trimmed.S1_r2.fq.gz --otu_table s1.tsv --threads 2 --output_extras

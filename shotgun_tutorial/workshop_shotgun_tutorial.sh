@@ -22,6 +22,10 @@ screen -s workshop
 # bining
 # (annotation, uncompleted)
 
+#### before your work #######
+# prepare necessary materials:
+# Copy bbmap_resources to your home path
+
 #### activate conda env #####
 conda activate py36
 ###################  qc  ######################
@@ -29,11 +33,7 @@ conda activate py36
 mkdir 01_cleandata
 cd 01_cleandata
 ln -s ../0_rawdata/* ./ # link
-trimmomatic PE -phred33 -threads 4 S1_r1.fq.gz S1_r2.fq.gz \
-      trimmed.S1_r1.fq.gz outtrimmed.S1_r1.fq.gz trimmed.S1_r2.fq.gz outtrimmed.S1_r2.fq.gz  \
-      ILLUMINACLIP:TruSeq3-PE.fa:2:30:10 \
-      SLIDINGWINDOW:5:20 LEADING:5 TRAILING:5 \
-      MINLEN:50
+bbduk.sh in1=S1_r1.fq.gz in2=S1_r2.fq.gz out=S1.clean.fq ref=~/bbmap_resources/adapters.fa ktrim=r k=23 mink=11 hdist=1 qtrim=r trimq=20 maq=20 -t=4 tpe tbo
 
 ##################   contig assembly   #######################
 ### we used megahit to save time and memory
@@ -41,9 +41,11 @@ trimmomatic PE -phred33 -threads 4 S1_r1.fq.gz S1_r2.fq.gz \
 cd ..
 mkdir -p 02_megahit
 cd 02_megahit
-ln -s ../01_cleandata/trimmed* ./
-megahit -1 trimmed.S1_r1.fq.gz -2 trimmed.S1_r2.fq.gz --min-count 2 --k-list 29,39,51,67,85,107,133 -m 0.5 -t 4 --min-contig-len 500 --out-prefix S1 -o S1
+ln -s ../01_cleandata/*clean.fq ./
+megahit --12 S1.clean.fq --min-count 2 --k-list 29,39,51,67,85,107,133 -m 0.5 -t 4 --min-contig-len 500 --out-prefix S1 -o S1
 
+# add prefix to each contig by sed 
+# this step is very important to make contig ID unique across samples
 sed -i "s/>/>S1\_/1" S1/S1.contigs.fa
 
 #################   ORF prediciton by prokka #######################
@@ -53,10 +55,9 @@ cd ..
 mkdir -p 03_prokka
 cd 03_prokka
 ln -s ../02_megahit/*/*.fa ./
-prokka --metagenome --cpus 4 --outdir S1 --prefix S1 --mincontiglen 500 S1.contigs.fa
+prokka --metagenome --cpus 4 --outdir S1 --prefix S1 --mincontiglen 500 --locustag S1 S1.contigs.fa
 
-sed -i "s/>/>S1\_/1" S1/S1.ffn
-sed -i "s/>/>S1\_/1" S1/S1.faa
+
 ############## prokka
 #.gff	This is the master annotation in GFF3 format, containing both sequences and annotations. It can be viewed directly in Artemis or IGV.
 #.gbk	This is a standard Genbank file derived from the master .gff. If the input to prokka was a multi-FASTA, then this will be a multi-Genbank, with one record for each sequence.
@@ -71,126 +72,61 @@ sed -i "s/>/>S1\_/1" S1/S1.faa
 #.txt	Statistics relating to the annotated features found.
 #.tsv	Tab-separated file of all features: locus_tag,ftype,len_bp,gene,EC_number,COG,product
 
-##################  CAZymes Annotation   ################
+##################  ORF: Cluster and Mapping  ################
+### we used mmseq to quickly cluster
+# time_consuming: ★★☆
+cd ..
+
+mkdir -p 04_ORF_mapping
+cd 04_ORF_mapping
+ln -s ../01_cleandata/*clean.fq ./
+ln -s ../03_prokka/*/*.ffn ./
+ln -s ../03_prokka/*/*.ffa ./
+
+### cluster ORF
+mkdir db clu_db clu_rep
+# faa cluster (to get cluster seqs of ffn in mapping)
+# We set the similiarity to 0.9
+mmseqs createdb *.faa db/faa
+mmseqs linclust --min-seq-id 0.9 db/faa clu_db/faa tmp --threads 24
+mmseqs createtsv db/faa db/faa clu_db/faa clu.faa.tsv --threads 24 # we could use clu.faa.tsv to extract all seq we need by seqkit
+
+### get representative sequences
+mmseqs createsubdb clu_db/faa db/faa clu_rep/faa
+mmseqs convert2fasta clu_rep/faa clu_rep.faa
+
+### extract rep fnn by faa ID
+seqkit seq -j 24 clu_rep.faa -n -i > rep_list.txt
+seqkit grep -j 24 --pattern-file rep_list.txt *.ffn > clu_rep.ffn
+
+### we used coverm to quickly get mapping and coverage
+# switch to conda env coverM: calculate coverage table
+# time_consuming: ★★★★
+conda activate coverM
+coverm contig --interleaved *.fq --reference clu_rep.ffn -t 60 --bam-file-cache-directory orf_bam -o clu_rep_coverage.tsv >> coverm.log.txt 2>&1
+
+### The table you get might need extra qulaity control includ but not limit to singleton removal. Please do it in you R
+
+##################  ORF Annotation   ################
+### There are a lot of annotation methods. We take cazymes and KEGG as example.
+### !NOTE: IF your clu_rep.faa is too LARGE, please use seqkit to split them into small files and then annotation
+### !NOTE: You can use parallel to annotatate small files quickly!
 ### we used mmseq to quickly cluster
 # time_consuming: ★★★
 cd ..
-### cazy annotation
+mkdir 05_ORF_annotation
+cd 05_ORF_annotation
+### cazyme annotation
+ln -s ../04_ORF_mapping/clu_rep.* ./
 
-mkdir 08_dbcan
-cd 08_dbcan
-# use protein sequence to find CGCs
-ln -s ../07_taxa/mimag .
-ln -s ../06_bin/MIMAG_list.txt .
-
-cd mimag
 conda activate run_dbcan
-for i in *.fa
-do
-  run_dbcan.py ${i} meta --out_dir ${i/\.fa/} --db_dir /vd03/home/MetaDatabase/dbcan --dia_cpu 16 --hmm_cpu 16 --tf_cpu 16 --hotpep_cpu 16
-done
 
-### modifiy result
-ls -d * > fna_list.txt
-awk 'NR>1 {print $0;}' overview.txt | awk '$5 > 2 {print $2;}' | cut -d '(' -f1 | cut -d '_' -f1 | paste -s -d ';'
+run_dbcan.py clu_rep.faa protein --out_pre clu_rep.faa --out_dir cazyme_annoation --db_dir /vd03/home/MetaDatabase/dbcan --dia_cpu 1 --hmm_cpu 1 --tf_cpu 1 --hotpep_cpu 1
 
-### merge result
-touch cazy_result.tsv
-while read i; do
-  gene=$(awk 'NR>1 {print $0;}' ${i}/overview.txt | awk '$5 > 2 {print $2;}' | cut -d '(' -f1 | cut -d '_' -f1 | paste -s -d ';')
-  echo $i $gene >> cazy_result.tsv
-done <fna_list.txt
+# check the result: overview.txt
 
-
-#################  KOfam annotation  ################
-# # time_consuming: ★★★★
-#在国家微生物科学数据中心网站可以下载最新版2019年KOfam ko_list和profiles （KEGG Orthologs（KOs）的定制HMM数据库）为用户的序列数据的搜索，通过将用户的序列数据与KEGG路径和EC编号联系起来，得到注释结果。
-mkdir orf
+### KEGG annotation 
+# time_consuming: ★★★★
 conda activate py36
-ln -s ../../06_bin/MIMAG_checkm.list
-while read i; do
-  cp -r ../../06_bin/${i}* .
-done <MIMAG_checkm.list
-
-### 48 core, 24 hour, complete nearly 80 binned genome; slowly
-for i in $(ls -d *); do
-    exec_annotation -f  detail-tsv -E 1e-5 --profile /vd03/home/MetaDatabase/KOfam_2019/Kofam/profiles/ --ko-list /vd03/home/MetaDatabase/KOfam_2019/Kofam/ko_list --cpu 48 --tmp-dir ./ko_tmp -o ${i}_kofam.txt ${i}/genes.fna
-done
-
--v var=${i} $13 > 50 && $14 <10 
-awk '{printf $3}' L2.52_kofam.txt
-sed -i "s/K//1" L2.52_kofam.txt
-sed -n '/K00174/p' L2.52_kofam.txt
-
-##################   mapping  ################
-### we used bamm to quickly get mapping and coverage
-# time_consuming: ★★★☆
-cd ..
-#switch to conda env py27
-conda activate py27
-mkdir -p 04_mapping
-cd 04_mapping
-ln -s ../01_cleandata/trimmed* ./
-ln -s ../02_megahit/*/*.fa ./
-ln -s ../03_prokka/*/*.ffn ./
-
-bamm make -d S1.ffn -c trimmed.S1_r1.fq.gz trimmed.S1_r2.fq.gz -t 4 --out_folder S1
-bamm parse -c S1.ffn.cov.tsv -b S1/S1.ffn.trimmed.S1_r1.bam
-
-bamm make -d S1.contigs.fa -c trimmed.S1_r1.fq.gz trimmed.S1_r2.fq.gz -t 4 --out_folder S1
-bamm parse -c S1.contigs.cov.tsv -b S1/S1.contigs.trimmed.S1_r1.bam
-
-#### Coverage calculation modes
-### BamM implements several coverage calculation methods. The user can choose the
-### method using the -m argument. ###
-# opmean: Outlier pileup coverage: average of reads overlapping each base, after bases
-# with coverage outside mean +/- 1 standard deviation have been excluded. The number of
-# standard deviation used for the cutoff can be changed with --coverage_range.
-# pmean: Pileup coverage: average of number of reads overlapping each base
-# tpmean: Trimmed pileup coverage: average of reads overlapping each base, after bases
-# with in the top and bottom 10% have been excluded. The 10% range can be changed
-# using --coverage_range.
-# counts: Absolute number of reads mapping
-# cmean: Like 'counts' except divided by the length of the contig
-# pmedian: Median pileup coverage: median of number of reads overlapping each base
-
-##################  cluster   ################
-### we used mmseq to quickly cluster
-# time_consuming: ★
-cd ..
-conda activate py36
-mkdir 05_orf_clustering
-cd 05_orf_clustering
-
-cat ../02_megahit/*/*.fa >> merge.contigs.fa
-cat ../03_prokka/*/*.faa >> merge.faa
-cat ../03_prokka/*/*.ffn >> merge.ffn
-# cluster and get its info
-mkdir db clu_db clu_rep
-
-# contigs cluster
-mmseqs createdb merge.contigs.fa db/contigs
-mmseqs linclust db/contigs clu_db/contigs tmp --threads 4 --min-seq-id 0.8
-mmseqs createtsv db/contigs db/contigs clu_db/contigs clu.contigs.tsv --threads 4
-mmseqs createseqfiledb db/contigs clu_db/contigs clu_rep/contigs
-mmseqs result2flat db/contigs db/contigs clu_rep/contigs clu_rep.contigs.fasta # get fasta file
-
-# faa cluster (to get ffn table)
-mmseqs createdb merge.faa db/faa
-mmseqs linclust db/faa clu_db/faa tmp --threads 24
-mmseqs createtsv db/faa db/faa clu_db/faa clu.faa.tsv --threads 24
-mmseqs createseqfiledb db/faa clu_db/faa clu_rep/faa
-mmseqs result2flat db/faa db/faa clu_rep/faa clu_rep.faa.fasta # get fasta file
-
-# merge table
-mkdir ffn_cov
-cp ../04_mapping/*ffn.covs.tsv ffn_cov/
-reformat_cluster.py -i ffn_cov -c clu.faa.tsv -o ffn.merge.tsv
-
-mkdir contigs_cov
-cp ../04_mapping/*.contigs.covs.tsv contigs_cov/
-reformat_cluster.py -i contigs_cov -c clu.contigs.tsv -o contigs.merge.tsv
-
-### singleM - alpha diversity estimation
-ln -s ../0_rawdata/* ./
-singlem pipe --forward trimmed.S1_r1.fq.gz --reverse trimmed.S1_r2.fq.gz --otu_table s1.tsv --threads 2 --output_extras
+exec_annotation -f  detail-tsv -E 1e-5 --profile /vd03/home/MetaDatabase/KOfam_2019/Kofam/profiles/ --ko-list /vd03/home/MetaDatabase/KOfam_2019/Kofam/ko_list --cpu 48 --tmp-dir ./ko_tmp -o KEGG_annoation/clu_rep.txt clu_rep.ffn
+# check the result: clu_rep.txt
