@@ -103,7 +103,7 @@ seqkit grep -j 24 --pattern-file rep_list.txt *.ffn > clu_rep.ffn
 # switch to conda env coverM: calculate coverage table
 # time_consuming: ★★★★
 conda activate coverM
-coverm contig --interleaved *.fq --reference clu_rep.ffn -t 60 --bam-file-cache-directory orf_bam -o clu_rep_coverage.tsv >> coverm.log.txt 2>&1
+coverm contig --interleaved *.fq --reference clu_rep.ffn -t 60 --bam-file-cache-directory orf_bam -o clu_rep_coverage.tsv
 
 ### The table you get might need extra qulaity control includ but not limit to singleton removal. Please do it in you R
 
@@ -130,3 +130,4 @@ run_dbcan.py clu_rep.faa protein --out_pre clu_rep.faa --out_dir cazyme_annoatio
 conda activate py36
 exec_annotation -f  detail-tsv -E 1e-5 --profile /vd03/home/MetaDatabase/KOfam_2019/Kofam/profiles/ --ko-list /vd03/home/MetaDatabase/KOfam_2019/Kofam/ko_list --cpu 48 --tmp-dir ./ko_tmp -o KEGG_annoation/clu_rep.txt clu_rep.ffn
 # check the result: clu_rep.txt
+
