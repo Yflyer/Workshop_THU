@@ -4,33 +4,25 @@
 ### github.com/Yflyer/
 
 ############### before the work ##################
-# please copy the data to your project directory
-mkdir [your_project_name]
-cd [your_project_name]
-#cp -r /vd04/yufei/workshop_shotgun/test/0_rawdata [your_project_name]
+# please make sure complete the previous tutorial 
+# enter the project directory
+mkdir Bin
+cd Bin
+
 # make a work screen
 # screen is useful, please know more
 screen -s binning
 
-# note
-# check bamm map detail: orientation insertsize
-# check bbmap
-# check maxbin2 workflow and parameters
-# check metabat2 workflow and example
-# check das_tool usage
-
-# Banfield lab:
-# BBmap remove Illumina adaptor and phiX sequences
-# Sickle to qc control
-# individually assembled by IDBA-UD
-mkdir L1
-cd L1
-ln -s ../../02_megahit/L1_*/*.fa .
-ln -s ../../01_bbmap/L1_* .
+# We still use one sample to complete whole workflow.
+# If you want to process multi samples, please refer to parallel tools or loop programing
+cd Bin
+ln -s ../../02_megahit/*/*.fa .
+ln -s ../../01_bbmap/*clean.fq .
 
 ### individual assembly stratgy
 conda activate py36
-seqkit seq -m 1500 *.fa > L1.fa
+### most of binning tools need contigs > 1500 bps
+seqkit seq -m 1500 S1.fa > S1.m1500.fa
 
 conda activate py27
 bamm make -d L1.fa -c L1-*.fq.gz -t 60 --out_folder L1
