@@ -1,5 +1,5 @@
 
-# Linux, QIIME2, & DADA2
+# Linux, & QIIME2
 Yufei Zeng
 yfzeng0827@hotmail.com
 github.com/Yflyer/
@@ -10,7 +10,8 @@ THU， 11/15/2019
 12/11/2019 添加了phylogenetic inference的方法教程
 12/16/2019 添加了Alpha/Beta diversity的计算代码
 
-## 1. Install your linux
+## 1. Local install or remote login
+###### 1.1 Information for local use
 For win10 user: enable the WSL and install Ubuntu 18.04 from Microsoft Store
 https://docs.microsoft.com/en-au/windows/wsl/install-manual
 （虽然说了有点多余）装系统后新建用户输入密码时，是不会显示密码的，不要以为出了bug，不要关闭或者跳过，输错了再输就是了。
@@ -19,7 +20,23 @@ For MacOS user: almost nothing to do
 1991年，**由于贫穷**，初生牛犊的北欧小伙Linus单枪匹马一个人基于Unix系统编写了Linux系统 —— 一个完全免费开源的高效开发系统，对整个计算机行业产生了巨大而深远的影响。
 * 贝尔实验室受军方委托研发一款多使用者、多任务和多层次计算的计算机系统MULTICS(Multiplexd information and Computer Services),最终由于项目难度过大流产。K.Thompson为了自己在该系统上的游戏得以延续，为这款游戏开发了系统环境，并被同事搞笑取名为UnICS（Uniplexed），即后续的Unix
 * Unix系统作为多任务系统的祖师爷级产品，逐渐成为行业标准，后来苹果的MacOS系统也基于该系统研发（MacOS几乎能和Linux无缝衔接的重要原因）
-* 最早的服务器（计算机），比如IBM的701，是无法进行多任务并行操作的，科学家们需要排队使用。随着万维网和Unix的出现，人们可以同时调用多个终端（terminal）去使用服务器。  
+* 最早的服务器（计算机），比如IBM的701，是无法进行多任务并行操作的，科学家们需要排队使用。随着万维网和Unix的出现，人们可以同时调用多个终端（terminal）去使用服务器。 
+
+###### 1.2 Information for remote sign-in
+
+Please,  
+(1) connect to THU vpn in advance  
+(2) install a remote terminal (e.g., Xshell)
+
+```
+IP：166.111.42.42
+User: test0
+password: ********
+```
+*Why we use Linux?*
+* High stability
+* Open source
+* Perfect For Programing
 
 
 
@@ -101,11 +118,24 @@ Home目录快捷键：~
 
 ---
 ## 4. Use QIIME2  
+###### *About QIIME2*
+QIIME2 is a next-generation microbiome bioinformatics platform that is extensible, free, open source, and community developed.
+ 
 Official Tutorial: https://docs.qiime2.org/2019.10/tutorials/  
 中文版教程： https://blog.csdn.net/woodcorpse/article/details/77929607
 
 ### 4.1 Data importing
-QIIME2支持多种类型的数据导入，比如说单端或者双端、fasta或fastq。由于：i) 目前主流都是双端测序; ii）大部分情况下拿到手都是原始fastq; iii）fasta数据不含质控，无法进行QIIME2中DADA2的聚类，本教程只解决大家导入双端fastq数据的问题。  
+QIIME2支持多种类型的数据导入，比如说单端或者双端、fasta或fastq。由于：i) 目前主流都是双端测序; ii）大部分情况下拿到手都是原始fastq; iii）fasta数据不含质控，无法进行QIIME2中DADA2的聚类，本教程只解决大家导入双端fastq数据的问题。 
+
+Before a project, you should know following information of your data, for example: 
+
+   * data type: split files of fastq
+   * data source: The University of Oklahoma
+   * method: 18s rRNA high through-put amplicon sequencing
+   * strategy: pair-end 250 bp without primer on V4 region (**(F565-R981, 416 bp)**)
+   * forward primer: CCAGCASCYGCGGTAATTCC **(20 bp)**
+   * reverse primer: ACTTTCGTTCTTGATYRA **(18 bp)**
+   * The pre-required files: R1 data, R2 data, and mapping information
 
 **a.后缀名为.fastq.gz的单个压缩文件**  
 EMP标准格式，需要有barcode文件  
@@ -232,7 +262,6 @@ qiime tools export  \
   --input-path rep-seqs.qza\
   --output-path result
 ```  
-
 
 ### More information
 plugin: https://docs.qiime2.org/2019.10/plugins/
@@ -378,7 +407,12 @@ qiime diversity beta-group-significance \
     --o-visualization core-metrics-results/bray_curtis_distance_matrix-status.qzv \
     --p-pairwise
 
-
+### Summary
+In this tutorial, we achieved following goals:
+* Use Linux
+* configure environment for processing dataset
+* change the unstructural sequence data into structual dataframe
+* annotate the taxanomy information of species
 
 ### 写在最后
 给大家安利一些软件：
